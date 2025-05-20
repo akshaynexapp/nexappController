@@ -1,0 +1,314 @@
+{% extends "admin/change_form.html" %}
+{% comment %} {% extends "admin/config/change_form.html" %} {% endcomment %}
+
+
+{% load static %}
+{% load i18n admin_modify %}
+
+{% block extrastyle %}
+{{ block.super }}
+{% if CONFIG_BACKEND_FIELD_SHOWN is False %}
+<style type="text/css">
+.form-row.field-backend{ display: none }
+.tab-content { display: none; }
+#overview-group { display: block; }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+
+
+    <script>
+    {% comment %} {% if OPENWISP_CONTROLLER_API_HOST %}
+        const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_API_HOST }}');
+    {% else %}
+        const owControllerApiHost = window.location;
+    {% endif %}
+        const owCommandApiEndpoint = '{{ commands_api_endpoint | safe }}'; {% endcomment %}
+
+
+          // **UPDATED**: Host and endpoint for tunnel AJAX requests
+  {% if OPENWISP_CONTROLLER_API_HOST %}
+  const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_API_HOST }}');
+{% else %}
+  const owControllerApiHost = window.location;
+{% endif %}
+const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
+
+{% comment %} django.jQuery(document).ready(function($) {
+    $('#id_sdlan_mac')
+      .val('{{ original.mac_address|default_if_none:""|escapejs }}')
+      .prop('readonly', true)
+      .on('focus', function() { this.select(); });
+
+    $('#sdlan-open-btn').on('click', function(e) {
+      e.preventDefault();
+      console.log('SDLAN Open SSH Tunnel button clicked');
+      window.location.href = 'https://3.6.121.36:30015/';
+    });
+  }); {% endcomment %}
+    </script>
+
+    
+
+
+
+   {{ block.super}}
+   <script type="text/javascript">
+    const commandsApiEndpoint = '{{ commands_api_endpoint|escapejs }}';
+    console.log('Proxy API endpoint:', commandsApiEndpoint);
+  </script>
+{% endblock extrahead %}
+
+
+
+{% block object-tools-items %}
+<li>
+    {% if download_url %}
+    <a href="{{ download_url }}" class="downloadlink">{% trans "Download configuration" %}</a>
+    {% endif %}
+</li>
+{{ block.super }}
+{% endblock %}
+
+{% block submit_buttons_top %}{% submit_row %}{% endblock %}
+{% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+
+{% block field_sets %}
+{% if not add %}
+<div id="loading-overlay" class="djnjc-overlay loading">
+    <div class="spinner"></div>
+</div>
+
+<div id="tabs-container">
+    <ul class="tabs">
+        <li>
+            <a class="button" href="#overview-group">{% trans 'Overview' %}</a>
+        </li>
+        <li>
+            <a class="button" href="#sdlan-group">{% trans "SDLAN" %} Remote</a>
+        </li>
+    </ul>
+    <div class="tabs-divider"></div>
+
+
+    <!-- **UPDATED**: Single SDLAN Remote block (duplicate removed) -->
+    <div class="inline-group module aligned tab-content" id="sdlan-group" style="display:none;">
+        <fieldset class="module aligned">
+          <h2>{% trans "SDLAN Remote" %}</h2>
+          <p>{% trans "Use this to open a per-device SSH tunnel via NPS." %}</p>
+  
+          <div class="form-row field-mac">
+            <label for="id_sdlan_mac">{% trans "Device MAC address" %}</label>
+            <input type="text" id="id_sdlan_mac" class="vTextField"
+                   value="{{ original.mac_address|default_if_none:'' }}" readonly />
+          </div>
+  
+          <div class="form-row field-local-port">
+            <label for="id_sdlan_port">{% trans "Local SSH port" %}</label>
+            <input type="number" id="id_sdlan_port" class="vIntegerField"
+                   value="22" min="1" max="65535" />
+          </div>
+  
+          <div class="form-row field-action">
+            <button type="button" class="button" id="sdlan-open-btn">{% trans "Open SSH Tunnel" %}</button>
+            <button type="button" class="button" id="sdlan-open-existing-btn" style="display:none; margin-left:10px;">{% trans "Open Existing Tunnel" %}</button>{% trans "Open SSH Tunnel" %}</button>
+
+          </div>
+  
+          <div id="sdlan-result" class="help"></div>
+        </fieldset>
+      </div>
+
+
+</div>
+
+
+
+{% endif %}
+{{ block.super }}
+{% endblock %}
+
+{% block content %}
+
+<div class="{% if not add %}change-form{% else %}add-form{% endif %}">
+    {{ block.super }}
+
+
+    <div class="djnjc-overlay" >
+        <div class="inner-group">
+            {% comment %} <fieldset class="module aligned current tab-content" id="sdlan-group">
+                <h2>{% trans "SDLAN Remote" %}</h2>
+                <p>nexapp sd-lan</p>
+            </fieldset> {% endcomment %}
+        </div>
+    </div>
+
+    {% block default_templates_js %}
+    {% if default_templates %}
+    <script>
+        // enable default templates - do not remove this comment
+        {% for template in default_templates %}
+        django.jQuery('input.sortedm2m[value={{ template }}]').prop('checked', true);
+        {% endfor %}
+    </script>
+    {% endif %}
+    {% if relevant_template_url %}
+    <script>
+        // enable default templates - do not remove this comment
+        (function ($) {
+            $(document).ready( function () {
+                window._relevantTemplateUrl = "{{ relevant_template_url | safe }}";
+                window.bindDefaultTemplateLoading();
+            })
+        }) (django.jQuery);
+    </script>
+    {% endif %}
+    <script>
+        window.staticUrl = "{% get_static_prefix %}";
+    </script>
+    {% endblock %}
+
+
+    <script type="text/javascript">
+      console.log('SDLAN Remote script loaded1');
+    
+      django.jQuery(function($) {
+        console.log('SDLAN Remote script loaded2');
+    
+        // Auto-populate MAC field
+     // Populate fields
+     var deviceMac = ('{{ original.mac_address|default_if_none:""|escapejs }}').toLowerCase();
+     var apiBase = '/nps-api';
+           var creds = { username: 'admin', password: 'admin' };
+     
+           // Helper: get next port
+           var nextPort = parseInt(localStorage.getItem('npsNextPort') || 30010, 10);
+           function getNextPort() {
+             var p = nextPort;
+             nextPort = (nextPort < 30050 ? nextPort + 1 : 30010);
+             localStorage.setItem('npsNextPort', nextPort);
+             return p;
+           }
+     
+           // Login
+           function apiLogin() {
+             return fetch(apiBase + '/login/verify', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(creds)
+             }).then(r => {
+               if (!r.ok) throw new Error('Login failed');
+               return r.json();
+             }).then(j => j.token);
+           }
+     
+           // Search client by MAC
+           //<!-- **UPDATED**: returns {id, exists} based on rows.length -->
+     function apiSearchClient(token, mac) {
+             return fetch(apiBase + '/client/list', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+               body: JSON.stringify({ search: mac, order: 'asc', limit: 1 })
+             }).then(r => {
+               if (!r.ok) throw new Error('Search client failed');
+               return r.json();
+             }).then(j => {
+               var list = j.rows || j.data || [];
+               return { id: (list[0] && (list[0].Id || list[0].id)) || null, exists: list.length > 0 };
+             });
+           }
+     
+                       // Add client (using query string to ensure vkey is passed correctly)
+          // <!-- **UPDATED**: use query string parameters for vkey and config_conn_allow -->
+     function apiAddClient(token, mac) {
+             var params = new URLSearchParams({ vkey: mac, config_conn_allow: 1 });
+             return fetch(apiBase + '/client/add?' + params.toString(), {
+               method: 'POST',
+               headers: { 'Authorization': 'Bearer ' + token }
+             })
+             .then(function(res) {
+               if (!res.ok) throw new Error('Add client failed');
+               return res.json();
+             })
+             .then(function(j) {
+               // server returns { id: <newId>, msg: 'add success', status:1 }
+               return j.id || (j.data && j.data.id);
+             });
+           }
+     
+           // Get existing tunnels for a client and target port
+         //  <!-- **NEW**: fetch existing tunnels for client and port -->
+     function apiGetTunnel(token, clientId, target) {
+             var qs = new URLSearchParams({ limit: 10, client_id: clientId, search: String(target) });
+             return fetch(apiBase + '/index/gettunnel?' + qs.toString(), {
+               method: 'GET',
+               headers: { 'Authorization': 'Bearer ' + token }
+             })
+             .then(function(res) {
+               if (!res.ok) throw new Error('Fetch tunnels failed: ' + res.status);
+               return res.json();
+             })
+             .then(function(j) {
+               // returns rows array
+               return j.rows || [];
+             });
+           }
+     
+           // Add tunnel
+         //  <!-- **UNCHANGED**: add tunnel only if no existing tunnel found -->
+     
+           function apiAddTunnel(token, clientId, target) {
+             var extPort = getNextPort();
+             var qs = new URLSearchParams({ type: 'tcp', client_id: clientId, remark: String(target), server_ip: '0.0.0.0', port: extPort, target: target });
+             return fetch(apiBase + '/index/add?' + qs.toString(), {
+               method: 'POST',
+               headers: { 'Authorization': 'Bearer ' + token }
+             }).then(r => {
+               if (!r.ok) throw new Error('Add tunnel failed');
+               return r.json();
+             }).then(j => {
+               if (j.status !== 1) throw new Error('Tunnel error: ' + j.msg);
+               return { ip: j.data && j.data.server_ip || window.location.hostname, port: j.data && j.data.port || extPort };
+             });
+           }
+                   function apiDeleteClient(token, clientId) {
+            return fetch(apiBase + '/client/del/', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ id: clientId })
+            }).then(r => { if (!r.ok) throw Error('Delete client failed'); return r.json(); });
+        }
+     
+           // Click handler
+         $('#sdlan-open-btn').click(function(e) {
+            e.preventDefault(); $('#sdlan-result').text('{% trans "Opening tunnel…" %}');
+            const target = 443;
+            apiLogin()
+              .then(token => apiSearchClient(token, deviceMac).then(res => ({ token, clientId: res.id, clientExists: res.exists })))
+              .then(ctx => ctx.clientExists ? ctx : apiAddClient(ctx.token, deviceMac).then(id => ({ token: ctx.token, clientId: id, clientExists: true })))
+              .then(ctx => apiGetTunnel(ctx.token, ctx.clientId, target).then(rows => {
+                  const existing = rows.find(r => String((r.Client&&r.Client.Id)||r.ClientId)===String(ctx.clientId) && String(r.Remark||r.TargetStr)===String(target));
+                  return existing ? { token: ctx.token, clientId: ctx.clientId, tunnel: { ip: existing.ServerIp||window.location.hostname, port: existing.Port } }
+                                     : apiAddTunnel(ctx.token, ctx.clientId, target).then(tun => ({ token: ctx.token, clientId: ctx.clientId, tunnel: tun }));
+              }))
+              .then(({ token, clientId, tunnel }) => {
+                  const remoteWin = window.open('https://' + tunnel.ip + ':' + tunnel.port + '/', '_blank');
+                  const watchCloser = setInterval(() => {
+                      if (remoteWin && remoteWin.closed) {
+                          clearInterval(watchCloser);
+                          apiDeleteClient(token, clientId)
+                            .then(j => console.log('Client deleted:', j))
+                            .catch(err => console.error('Error deleting client:', err));
+                      }
+                  }, 1000);
+              })
+              .catch(err => $('#sdlan-result').text('{% trans "Error:" %} ' + err.message));
+        });
+    });
+        
+
+    </script>
+</div>
+
+{% endblock %}

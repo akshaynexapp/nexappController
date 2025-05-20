@@ -1,0 +1,71 @@
+{% extends "admin/base_site.html" %} {% block content %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Add tunnel</title>
+  </head>
+  <body>
+    <!-- <h1>VPN IPSec Configuration</h1> -->
+    <!-- 
+    <div id="config-display">
+      <em>Loading current config...</em>
+    </div> -->
+
+    <hr />
+    <h1>Submit New Tunnel</h1>
+    <form method="post" action="{% url 'set_config' %}">
+      {% csrf_token %}
+      <label><strong>Remote MG IP :</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_mg_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Remote Subnet:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_subnet"
+        required
+      /><br /><br />
+
+      <label><strong>Remote WAN IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_wan_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local MG IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_mg_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local WAN IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_wan_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local Subnet:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_subnet"
+        required
+      /><br /><br />
+
+      <button type="submit">Submit Config</button>
+    </form>
+  </body>
+</html>
+
+{% endblock %}

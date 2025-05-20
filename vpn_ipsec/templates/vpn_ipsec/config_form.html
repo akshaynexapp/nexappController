@@ -1,0 +1,101 @@
+{% extends "admin/base_site.html" %} {% block content %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>IPSec Configuration</title>
+    <script>
+      async function loadConfig() {
+        try {
+          const response = await fetch("/vpn/ipsec/get-config/");
+          const result = await response.json();
+          if (result.code === 200) {
+            const data = result.data;
+            const container = document.getElementById("config-display");
+            container.innerHTML = `
+                        <h3>Current IPSec Configuration</h3>
+                        <ul>
+                            <li><strong>Status:</strong> ${data.status}</li>
+                            <li><strong>Service:</strong> ${data.service}</li>
+                            <li><strong>Remote MG IP:</strong> ${data.remote_mg_ip}</li>
+                            <li><strong>Remote Subnet:</strong> ${data.remote_subnet}</li>
+                            <li><strong>Remote WAN IP:</strong> ${data.remote_wan_ip}</li>
+                            <li><strong>Local MG IP:</strong> ${data.local_mg_ip}</li>
+                            <li><strong>Local WAN IP:</strong> ${data.local_wan_ip}</li>
+                            <li><strong>Local Subnet:</strong> ${data.local_subnet}</li>
+                        </ul>
+                    `;
+          }
+        } catch (error) {
+          console.error("Failed to fetch config:", error);
+        }
+      }
+
+      window.onload = loadConfig;
+    </script>
+  </head>
+  <body>
+    <h1>VPN IPSec Configuration</h1>
+
+    <div id="config-display">
+      <em>Loading current config...</em>
+    </div>
+
+    <hr />
+    <title>IPSec Configuration</title>
+    <h1>Submit New Config</h1>
+    <form method="post" action="{% url 'set_config' %}">
+      {% csrf_token %}
+      <label><strong>Remote MG IP :</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_mg_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Remote Subnet:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_subnet"
+        required
+      /><br /><br />
+
+      <label><strong>Remote WAN IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="remote_wan_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local MG IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_mg_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local WAN IP:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_wan_ip"
+        required
+      /><br /><br />
+
+      <label><strong>Local Subnet:</strong></label>
+      <input
+        style="margin: 0px 20px"
+        type="text"
+        name="local_subnet"
+        required
+      /><br /><br />
+
+      <button type="submit">Submit Config</button>
+    </form>
+  </body>
+</html>
+
+{% endblock %}

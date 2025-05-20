@@ -15,12 +15,36 @@ SECRET_KEY = 'EBPaxiBG9*S+akL[E8v=)ROkeTlpkk#t9j+ny[a6PrXxbfxs5A'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+# CELERY_BROKER_URL        = 'redis://localhost:6379/0'
+
+# # 2. Tell it what content/serialization to expect
+# CELERY_ACCEPT_CONTENT    = ['json']
+# CELERY_TASK_SERIALIZER   = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+
 ALLOWED_HOSTS = [
     '3.6.121.36',
 ]
+OPENWISP_IPAM_SUBNET_MODEL = 'nexapp_ipam.Subnet'
+OPENWISP_IPAM_IPADDRESS_MODEL = 'nexapp_ipam.IpAddress'
+
+OPENWISP_RADIUS_RADIUSGROUP_MODEL = 'nexapp_radius.RadiusGroup'
+OPENWISP_RADIUS_RADIUSACCOUNTING_MODEL = 'nexapp_radius.RadiusAccounting'
+OPENWISP_RADIUS_RADIUSCHECK_MODEL = 'nexapp_radius.RadiusCheck'
+OPENWISP_RADIUS_RADIUSREPLY_MODEL = 'nexapp_radius.RadiusReply'
+OPENWISP_RADIUS_RADIUSGROUPCHECK_MODEL = 'nexapp_radius.RadiusGroupCheck'
+OPENWISP_RADIUS_RADIUSGROUPREPLY_MODEL = 'nexapp_radius.RadiusGroupReply'
+OPENWISP_RADIUS_RADIUSUSERGROUP_MODEL = 'nexapp_radius.RadiusUserGroup'
+
+OPENWISP_USERS_ORGANIZATION_MODEL = 'nexapp_users.Organization'
+OPENWISP_USERS_ORGANIZATIONUSER_MODEL = 'nexapp_users.OrganizationUser'
+OPENWISP_USERS_ORGANIZATIONOWNER_MODEL = 'nexapp_users.OrganizationOwner'
+OPENWISP_USERS_ORGANIZATIONINVITATION_MODEL = 'nexapp_users.OrganizationInvitation'
+OPENWISP_USERS_GROUP_MODEL = 'nexapp_users.Group'
+AUTH_USER_MODEL = 'nexapp_users.User'
 
 # Application definition
-
+USERS_AUTH_THROTTLE_RATE = None
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -29,7 +53,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'django.contrib.gis',
-    # 'nexapp_vpn',
     # all-auth
     'django.contrib.sites',
     # overrides allauth templates
@@ -40,7 +63,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'django_extensions',
     # openwisp2 modules
-    'openwisp_users',
+    # 'openwisp_users',
     'openwisp_controller',
     'openwisp_controller.pki',
     'openwisp_controller.config',
@@ -48,19 +71,22 @@ INSTALLED_APPS = [
     'openwisp_controller.connection',
     'openwisp_monitoring.monitoring',
     'openwisp_monitoring.device',
-    'openwisp_monitoring.check',
-    'nexappdevice',
-    # 'nexapptopology',
+    'openwisp_users.apps.OpenwispUsersConfig',  # This is correct
 
-    # 'nexapp_ipam',
+    'openwisp_monitoring.check',
+    'vpn_ipsec',
+    'sdwan_tunnel',
+    # 'nexapptopology',
     'nested_admin',
     'openwisp_notifications',
     'flat_json_widget',
     'openwisp_network_topology',
-    'openwisp_ipam',
+    # 'openwisp_ipam',
+    'openwisp_ipam.apps.OpenWispIpamConfig',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    'openwisp_radius',
+    # 'openwisp_radius',
+    'openwisp_radius.apps.OpenwispRadiusConfig',
     # openwisp2 admin theme
     # (must be loaded here)
     'openwisp_utils.admin_theme',
@@ -81,6 +107,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'channels',
     'pipeline',
+    'formtools',
     'import_export',
     'djcelery_email',
 ]
@@ -112,8 +139,13 @@ OPENWISP_ADMIN_THEME_LINKS = [
 
 PRIVATE_STORAGE_ROOT = os.path.join(BASE_DIR, 'private')
 
+ORGANIZATIONS_USER_MODEL = 'nexapp_users.OrganizationUser'
+ORGANIZATIONS_ORGANIZATION_MODEL = 'nexapp_users.Organization'
+ORGANIZATIONS_OWNER_MODEL = 'nexapp_users.OrganizationOwner'
+ORGANIZATIONS_INVITATION_MODEL = 'nexapp_users.OrganizationInvitation'
 
-AUTH_USER_MODEL = 'openwisp_users.User'
+
+# AUTH_USER_MODEL = 'openwisp_users.User'
 SITE_ID = 1
 LOGIN_REDIRECT_URL = 'admin:index'
 ACCOUNT_LOGOUT_REDIRECT_URL = LOGIN_REDIRECT_URL
@@ -413,9 +445,15 @@ LOGGING = {
     'loggers': {
         'django.security.DisallowedHost': {
             'handlers': ['main_log'],
-            'propagate': False,
-        }
+            'propagate': True,
+        },
+    #     'nexappvpn.models': {
+    #         'handlers': ['console', 'main_log'],
+    #         'level': 'DEBUG',
+    #         'propagate': False
+    # },
     }
+    
 }
 
 # HTML minification with django pipeline
@@ -438,6 +476,22 @@ TIMESERIES_DATABASE = {
 OPENWISP_MONITORING_DEFAULT_RETENTION_POLICY = '26280h0m0s'
 
 
-
+# REST_FRAMEWORK = {
+#     # Add your other DRF settings here if any
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework.authentication.SessionAuthentication',
+#         'rest_framework.authentication.BasicAuthentication',
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+#     'DEFAULT_THROTTLE_CLASSES': [
+#         'rest_framework.throttling.UserRateThrottle',
+#         'rest_framework.throttling.AnonRateThrottle',
+#     ],
+#     'DEFAULT_THROTTLE_RATES': {
+#         'user': '1000/hour',  # Increase as needed
+#         'anon': '100/hour',
+#     }
+# }
 
 TEST_RUNNER = 'openwisp_utils.metric_collection.tests.runner.MockRequestPostRunner'
+

@@ -1,0 +1,155 @@
+{% load leaflet_tags i18n %}
+{% load i18n %}
+{% load static %}
+<script type="text/javascript">
+  window._owGeoMapConfig = {
+    geoJsonUrl: '{{ monitoring_location_geojson_url }}',
+    locationDeviceUrl: '{{ monitoring_device_list_url }}?page_size=5'
+  }
+</script>
+<script type="text/javascript" src={%static 'monitoring/js/lib/netjsongraph.min.js' %}></script>
+<script type="text/javascript" src={%static 'monitoring/js/lib/leaflet.fullscreen.min.js' %}></script>
+<div id='leaflet-config'>
+  {% autoescape on %}{% leaflet_json_config %}{% endautoescape %}
+</div>
+
+
+<div id="device-map-container">
+  <div class="no-data">
+    <p>{% trans 'No map data to show' %}.</p>
+    <p><a class="button submit" href="#close">Close</a></p>
+  </div>
+  <div class="ow-loading-spinner"></div>
+</div>
+
+
+<div id="card-div" class="cards">
+
+  <div class="card">
+    <h2>Total Devices</h2>
+    <p id="total-devices">Loading...</p>
+  </div>
+  <div class="card">
+    <h2>Online Devices</h2>
+    <p id="monitoring-ok">Loading...</p>
+  </div>
+  <div class="card">
+    <h2>Offline Devices</h2>
+    <p id="monitoring-critical">Loading...</p>
+  </div>
+</div>
+
+<script>
+  let cachedToken = sessionStorage.getItem('cachedToken') || '80ee082483ee2a41d520909e571a3970f06d5907'; // Use fallback token
+
+  async function fetchAuthToken() {
+    if (cachedToken) return cachedToken;
+    // Commented out to prevent token rate limit
+    // try {
+    //   const response = await fetch('https://3.6.121.36/api/v1/users/token/', {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/x-www-form-urlencoded'
+    //     },
+    //     body: new URLSearchParams({
+    //       'username': 'admin',
+    //       'password': 'Nexapp@123'
+    //     }),
+    //     mode: 'cors'
+    //   });
+
+    //   if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    //   const data = await response.json();
+    //   cachedToken = data.token;
+    //   sessionStorage.setItem('cachedToken', cachedToken);
+    //   return cachedToken;
+    // } catch (error) {
+    //   console.error('Token fetch failed:', error);
+    //   return null;
+    // }
+  }
+
+  async function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function fetchDeviceData() {
+    const token = await fetchAuthToken();
+    if (!token) {
+      document.getElementById('total-devices').innerText = 'Auth error';
+      document.getElementById('monitoring-ok').innerText = 'Auth error';
+      document.getElementById('monitoring-critical').innerText = 'Auth error';
+      return;
+    }
+
+    try {
+      const response = await fetch('https://3.6.121.36/api/v1/controller/device/', {
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Token ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      document.getElementById('total-devices').innerText = data.count;
+
+      const uuids = data.results.map(device => device.id);
+
+      let okStatusCount = 0;
+      let criticalStatusCount = 0;
+
+      // Process in sequence with delay to avoid rate limiting
+      for (const uuid of uuids) {
+        try {
+          const res = await fetch(`https://3.6.121.36/api/v1/monitoring/device/${uuid}/`, {
+            headers: {
+              'accept': 'application/json',
+              'Authorization': `Token ${token}`
+            }
+          });
+          const deviceStatus = await res.json();
+          if (deviceStatus.monitoring && deviceStatus.monitoring.status === 'ok') {
+            okStatusCount++;
+          } else if (deviceStatus.monitoring && deviceStatus.monitoring.status === 'critical') {
+            criticalStatusCount++;
+          }
+          await delay(200); // Delay between requests
+        } catch (err) {
+          console.warn(`Failed fetching status for device ${uuid}`);
+        }
+      }
+
+      document.getElementById('monitoring-ok').innerHTML = `<span style='color:green;'>●</span> ${okStatusCount}`;
+      document.getElementById('monitoring-critical').innerHTML = `<span style='color:red;'>●</span> ${criticalStatusCount}`;
+
+    } catch (error) {
+      console.error('Error fetching device data:', error);
+      document.getElementById('total-devices').innerText = 'Error';
+      document.getElementById('monitoring-ok').innerText = 'Error';
+      document.getElementById('monitoring-critical').innerText = 'Error';
+    }
+  }
+
+  fetchDeviceData();
+</script>
+
+<style>
+  .cards {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+  .card {
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #f9f9f9;
+    width: 200px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .card h2 {
+    margin-bottom: 0.5rem;
+  }
+</style>

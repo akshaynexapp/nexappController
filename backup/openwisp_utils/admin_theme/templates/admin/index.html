@@ -1,0 +1,81 @@
+{% extends "admin/index.html" %}
+{% load static i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static " admin/css/ow-dashboard.css" %}" />
+{% for css in dashboard_css %}
+<link rel="stylesheet" type="text/css" href="{% static css %}" />
+{% endfor %}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if not media.js %}
+<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+{% endif %}
+{% endblock %}
+
+{% block messages %}
+{{ block.super }}
+
+{% if not app_label and dashboard_enabled %}
+
+{% for template in dashboard_templates_before_charts %}
+{% include template %}
+{% endfor %}
+
+
+
+
+<div id="plot-container"></div>
+
+{% for template in dashboard_templates_after_charts %}
+{% include template %}
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+{% if not app_label and dashboard_enabled %}
+
+<script>
+  const owDashboardCharts = {{ dashboard_charts | safe }};
+  console.log("Dashboard Charts Data: ", owDashboardCharts);
+
+  
+const container = document.getElementById("plot-container");
+
+// Convert object to array
+const chartsArray = Object.values(owDashboardCharts);
+
+if (chartsArray.length > 0) {
+    chartsArray.forEach(chart => {
+        const chartDiv = document.createElement("div");
+        chartDiv.classList.add("chart-card");
+        chartDiv.innerHTML = `
+            <h3>${chart.name}</h3>
+            <p>Type: ${chart.type || 'N/A'}</p>
+            <p>Values: ${chart.values.join(" / ")}</p>
+        `;
+        container.appendChild(chartDiv);
+    });
+} else {
+    container.innerHTML = "<p>No charts available</p>";
+}
+</script>
+
+<script src="{% static " admin/vendor/js/plotly-cartesian.min.js" %}"></script>
+<script src="{% static " admin/js/ow-dashboard.js" %}"></script>
+{% for js in dashboard_js %}
+<script src="{% static js %}"></script>
+{% endfor %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{
+  "ns_name": "{{ tunnel.name }}",
+  "ike": {
+    "hash_algorithm": "{{ tunnel.ike_integrity_algorithm }}",
+    "encryption_algorithm": "{{ tunnel.ike_encryption_algorithm }}",
+    "dh_group": "{{ tunnel.ike_diffie_hellman_group }}",
+    "rekeytime": {{ tunnel.ike_key_lifetime }}
+  },
+  "esp": {
+    "hash_algorithm": "{{ tunnel.esp_integrity_algorithm }}",
+    "encryption_algorithm": "{{ tunnel.esp_encryption_algorithm }}",
+    "dh_group": "{{ tunnel.esp_diffie_hellman_group }}",
+    "rekeytime": {{ tunnel.esp_key_lifetime }}
+  },
+  "ipcomp": "true",
+  "enabled": "1",
+  "dpdaction": "none",
+  "keyexchange": "{{ tunnel.ike_version }}",
+  "remote_subnet": ["192.168.150.0/24"],
+  "local_subnet": ["192.168.150.0/24"],
+  "gateway": "{{ peer.gateway | default('') }}",
+  "local_identifier": "{{ tunnel.local_identifier }}",
+  "remote_identifier": "{{ tunnel.remote_identifier }}",
+  "local_ip": "{{ peer.local_ip }}",
+  "pre_shared_key": "{{ tunnel.pre_shared_key }}"
+}

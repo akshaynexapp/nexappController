@@ -1,0 +1,14 @@
+<!-- vpn_wizard/step1.html -->
+{% extends "admin/base_site.html" %} {% block content %}
+<h2>Step 1: Basic Tunnel Info & Devices</h2>
+<form method="post">
+  {% csrf_token %} {{ wizard.management_form }} {% for field in
+  wizard.form.visible_fields %}
+  <div>
+    <label>{{ field.label_tag }} {{ field.errors }}</label>
+    {{ field }}
+  </div>
+  {% endfor %}
+  <button type="submit">Next</button>
+</form>
+{% endblock %}
