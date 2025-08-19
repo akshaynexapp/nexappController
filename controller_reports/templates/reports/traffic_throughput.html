@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Network Traffic Throughput</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Summary Throughput</h2><div class="chart">[Area Chart Placeholder]</div></div>
+<div class="section">
+  <h2>Top Branches</h2>
+  <table>
+    <thead><tr><th>Site</th><th>Total Down (GB)</th><th>Total Up (GB)</th><th>Peak Mbps</th><th>95th %</th></tr></thead>
+    <tbody>
+      {% for s in top_sites %}
+      <tr><td>{{ s.site_name }}</td><td>{{ s.total_down_gb }}</td><td>{{ s.total_up_gb }}</td><td>{{ s.peak_mbps }}</td><td>{{ s.p95_mbps }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -56,6 +56,22 @@ class OpenWispAdminThemeConfig(AppConfig):
             config={'label': _('Home'), 'url': '/admin', 'icon': 'ow-dashboard-icon'},
         )
         register_menu_group(
+            position=894,
+            config={
+                'label': _('Notifications'),
+                'url': '/admin/notication/',
+                'icon': 'ow-ringing-icon',
+            },
+        )
+        register_menu_group(
+            position=895,
+            config={
+                'label': _('Reports'),
+                'url': '/admin/reports/all/',
+                'icon': 'ow-report-icon',
+            },
+        )
+        register_menu_group(
             position=899,
             config={
                 'label': _('System info'),

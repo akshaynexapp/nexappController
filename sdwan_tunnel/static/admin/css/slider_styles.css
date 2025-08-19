@@ -1,0 +1,42 @@
+/* # --- Static File: static/admin/css/slider_styles.css --- */
+/* # Use native range slider styles and value labels */
+input[type=range] {
+    width: 350px;
+    min-width: 300px;
+    margin: 8px 0;
+    height: 5px;
+    background: #f3d6d6;
+    border-radius: 4px;
+    -webkit-appearance: none;
+
+}
+input[type=range]:focus {
+    outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #005a9c;
+    cursor: pointer;
+    margin-top: -6px;
+}
+input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #005a9c;
+    cursor: pointer;
+}
+.slider-value {
+    display: inline-block;
+    margin-left: 8px;
+    font-weight: bold;
+}
+#id_realtime_bandwidth_limit_helptext{
+    font-weight: 700 !important;
+    padding-left: 30px !important;
+
+}

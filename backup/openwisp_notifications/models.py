@@ -1,4 +1,5 @@
 from swapper import swappable_setting
+from openwisp_notifications.apps import OpenwispNotificationsConfig as AppConfig
 
 from openwisp_notifications.base.models import (
     AbstractIgnoreObjectNotification,
@@ -17,12 +18,14 @@ class Notification(AbstractNotification):
 class NotificationSetting(AbstractNotificationSetting):
     class Meta(AbstractNotificationSetting.Meta):
         abstract = False
+        app_label = 'openwisp_notifications'
         swappable = swappable_setting('openwisp_notifications', 'NotificationSetting')
-
 
 class IgnoreObjectNotification(AbstractIgnoreObjectNotification):
     class Meta(AbstractIgnoreObjectNotification.Meta):
-        abstract = False
-        swappable = swappable_setting(
-            'openwisp_notifications', 'IgnoreObjectNotification'
+        abstract   = False
+        app_label  = 'openwisp_notifications'             # 'nexapp_notifications'
+        swappable  = swappable_setting(
+           'openwisp_notifications',                     # ← new label
+            'IgnoreObjectNotification'
         )

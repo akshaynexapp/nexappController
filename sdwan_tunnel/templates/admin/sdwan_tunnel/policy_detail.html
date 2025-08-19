@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+    <h1>Path Selection Policy: {{ policy.name }}</h1>
+    {# …your custom HTML… #}
+    <div id="tabs-container">
+        <ul class="tabs" style=" margin: 0; padding: 0; display: flex;">
+          <li style="margin-right: 1rem;list-style-type: none;"><a class="button" href="#overview-group">Overview</a></li>
+          <li  style="list-style-type: none;"><a class="button" href="#wan-links-group">WAN Links</a></li>
+        </ul>
+        <div class="tabs-divider"></div>
+    </div>
+
+
+{% endblock %}

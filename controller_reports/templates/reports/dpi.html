@@ -1,0 +1,17 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>DPI — Application & Protocol Usage</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Top Applications (by Bytes)</h2><div class="chart">[Top-N Bar Chart Placeholder]</div></div>
+<div class="section">
+  <h2>Breakdown</h2>
+  <table>
+    <thead><tr><th>Application</th><th>Protocol</th><th>Bytes Down</th><th>Bytes Up</th><th>Flows</th><th>Local Hosts</th><th>Remote Hosts</th></tr></thead>
+    <tbody>
+      {% for a in apps %}
+      <tr><td>{{ a.application }}</td><td>{{ a.protocol }}</td><td>{{ a.bytes_down }}</td><td>{{ a.bytes_up }}</td><td>{{ a.flows }}</td><td>{{ a.local_hosts }}</td><td>{{ a.remote_hosts }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

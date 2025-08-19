@@ -55,7 +55,15 @@ class AbstractDevice(OrgMixin, BaseModel):
         max_length=64,
         blank=True,
         db_index=True,
-        help_text=_('device model and manufacturer'),
+        help_text=_('device model Number'),
+    )
+    serial_number = models.CharField(
+       
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text=_('device serial number'),
     )
     os = models.CharField(
         _('operating system'),

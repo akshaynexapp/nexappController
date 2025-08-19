@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block content %}
+  <h1>{% trans "Device Map View" %}</h1>
+
+  <div id="device-map-container"
+       style="position:relative; height: 600px; margin-bottom: 1em;">
+    <div class="ow-loading-spinner"
+         style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">
+      <!-- you can swap in your spinner markup here -->
+      <span>Loading…</span>
+    </div>
+    <div class="no-data" style="display:none; text-align:center; padding:1em; cursor:pointer;">
+      {% trans "No devices found. Click to hide." %}
+    </div>
+  </div>
+
+  {# pass your Django context into JS as JSON #}
+  <script id="leaflet-config" type="application/json">
+    {{ leaflet_config|safe }}
+  </script>
+
+  {# load your static JS #}
+  <script src="{% static 'openwisp_monitoring/device/static/monitoring/js/device-map.js' %}"></script>
+{% endblock %}

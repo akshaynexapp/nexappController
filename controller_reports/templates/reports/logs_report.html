@@ -1,0 +1,17 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>Log Summary</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Counts by Severity</h2><div class="chart">[Bar Chart Placeholder]</div></div>
+<div class="section">
+  <h2>Recent Errors</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Device</th><th>Facility</th><th>Severity</th><th>App</th><th>Message</th></tr></thead>
+    <tbody>
+      {% for r in recent_errors %}
+      <tr><td>{{ r.ts }}</td><td>{{ r.device_name }}</td><td>{{ r.facility }}</td><td>{{ r.severity }}</td><td>{{ r.app }}</td><td>{{ r.msg }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -98,11 +98,39 @@ class LocationAdmin(MultitenantAdminMixin, AbstractLocationAdmin):
     form = LocationForm
     inlines = [FloorPlanInline]
     list_select_related = ('organization',)
+    def get_fieldsets(self, request, obj=None):
+        # 1) Ask the parent for its fieldsets (or fall back to an empty list)
+        base = super().get_fieldsets(request, obj) or []
+        # 2) Ensure it’s a mutable list
+        base = list(base)
+        # 3) Define your extra panel as a single‐item list
+        extra = [
+            ('Additional Location Info', {
+                'fields': ('city', 'state'),
+                'description': 'Optional city and state for this Location',
+            }),
+        ]
+        # 4) Return the concatenated list of panels
+        return base + extra
 
 
 LocationAdmin.list_display.insert(1, 'organization')
 LocationAdmin.list_filter.insert(0, MultitenantOrgFilter)
 
+
+
+
+# class LocationAdmin(MultitenantAdminMixin, AbstractLocationAdmin):
+#     form = LocationForm
+#     inlines = [FloorPlanInline]
+#     list_select_related = ('organization',)
+
+  
+
+    
+    
+
+    
 
 class DeviceLocationInline(
     ObjectLocationMixin, DeactivatedDeviceReadOnlyMixin, admin.StackedInline

@@ -1,7 +1,4 @@
 {% extends "admin/change_form.html" %}
-{% comment %} {% extends "admin/config/change_form.html" %} {% endcomment %}
-
-
 {% load static %}
 {% load i18n admin_modify %}
 
@@ -10,56 +7,25 @@
 {% if CONFIG_BACKEND_FIELD_SHOWN is False %}
 <style type="text/css">
 .form-row.field-backend{ display: none }
-.tab-content { display: none; }
-#overview-group { display: block; }
+
 </style>
 {% endif %}
 {% endblock %}
 
 {% block extrahead %}
-
-
     <script>
-    {% comment %} {% if OPENWISP_CONTROLLER_API_HOST %}
+    {% if OPENWISP_CONTROLLER_API_HOST %}
         const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_API_HOST }}');
     {% else %}
         const owControllerApiHost = window.location;
     {% endif %}
-        const owCommandApiEndpoint = '{{ commands_api_endpoint | safe }}'; {% endcomment %}
-
-
-          // **UPDATED**: Host and endpoint for tunnel AJAX requests
-  {% if OPENWISP_CONTROLLER_API_HOST %}
-  const owControllerApiHost = new URL('{{ OPENWISP_CONTROLLER_API_HOST }}');
-{% else %}
-  const owControllerApiHost = window.location;
-{% endif %}
-const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
-
-{% comment %} django.jQuery(document).ready(function($) {
-    $('#id_sdlan_mac')
-      .val('{{ original.mac_address|default_if_none:""|escapejs }}')
-      .prop('readonly', true)
-      .on('focus', function() { this.select(); });
-
-    $('#sdlan-open-btn').on('click', function(e) {
-      e.preventDefault();
-      console.log('SDLAN Open SSH Tunnel button clicked');
-      window.location.href = 'https://3.6.121.36:30015/';
-    });
-  }); {% endcomment %}
+        const owCommandApiEndpoint = '{{ commands_api_endpoint | safe }}';
     </script>
-
-    
-
-
-
    {{ block.super}}
-   <script type="text/javascript">
-    const commandsApiEndpoint = '{{ commands_api_endpoint|escapejs }}';
-    console.log('Proxy API endpoint:', commandsApiEndpoint);
-  </script>
 {% endblock extrahead %}
+
+
+
 
 
 
@@ -69,11 +35,162 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
     <a href="{{ download_url }}" class="downloadlink">{% trans "Download configuration" %}</a>
     {% endif %}
 </li>
+  <li>
+    <a href="#" id="view-config-btn" data-mac="{{ original.mac_address }}" class="button">
+      {% trans "View configuration" %}
+    </a>
+  </li>
 {{ block.super }}
+<div id="config-modal" class="djnjc-overlay" style="display:none;">
+    <div class="modal-content" style="background:#00000000; color: #adffa6; padding:1.5rem; max-width:100%; margin:0 auto; border-radius:.5rem; position:relative;">
+      <button id="config-close" style="position:absolute; color: #adffa6; top:.5rem; right:.5rem;">×</button>
+      <h2>Router Configuration</h2>
+      <pre id="config-output"
+           style="white-space:pre-wrap;color: #adffa6; word-wrap:break-word; max-height:80vh; overflow:auto;">
+      </pre>
+    </div>
+  </div>
+ <script>
+    django.jQuery(function($){
+      // — DOM elements
+      const btn      = $('#view-config-btn');
+      const modal    = $('#config-modal');
+      const closeBtn = $('#config-close');
+      const output   = $('#config-output');
+      // — Modal helpers
+      function showModal() { modal.show(); }
+      function hideModal() { modal.hide(); }
+
+      // — Token helper
+      let cachedToken = sessionStorage.getItem('cachedToken')
+                         || '80ee082483ee2a41d520909e571a3970f06d5907';
+      async function fetchAuthToken() {
+        return cachedToken;
+      }
+
+      // — Fetch controller UUID by MAC
+      async function fetchDeviceUUID(mac) {
+        const token = await fetchAuthToken();
+        const res   = await fetch(`https://${window.location.host}/api/v1/controller/device/`, {
+          headers: {
+            'Accept':        'application/json',
+            'Authorization': `Token ${token}`
+          }
+        });
+        if (!res.ok) throw new Error(`Device fetch failed (${res.status})`);
+        const { results } = await res.json();
+        const dev = results.find(d => d.mac_address.toLowerCase() === mac.toLowerCase());
+        if (!dev) throw new Error('Device not found');
+        return dev.id;
+      }
+
+      // — Fetch the config JSON
+      async function fetchConfig(uuid) {
+        const token = await fetchAuthToken();
+        const res   = await fetch(`https://${window.location.host}/api/v1/monitoring/device/${uuid}/configpush/`, {
+          headers: {
+            'Accept':        'application/json',
+            'Authorization': `Token ${token}`
+          }
+        });
+        if (!res.ok) throw new Error(`Config fetch failed (${res.status})`);
+        const json = await res.json();
+        return json.latest_raw;
+      }
+
+      // — Wire up the button
+      btn.on('click', async function(e){
+        e.preventDefault();
+        output.text('Loading…');
+        showModal();
+        try {
+          const mac  = btn.data('mac');
+          const uuid = await fetchDeviceUUID(mac);
+          const cfg  = await fetchConfig(uuid);
+          let outText = '';
+// 1) loop over each package (network, system, openwisp-monitoring)
+for (const [pkg, rawStr] of Object.entries(cfg)) {
+  outText += '----------------------------------------------------------\n';
+  outText += `package ${pkg}\n\n`;
+
+  // 2) parse rawStr into named sections
+  const sections = {};
+  rawStr
+    .split('\n')
+    .filter(Boolean)
+    .forEach(line => {
+      const [lhs, rhs] = line.split('=', 2);
+      const [, section, prop] = lhs.split('.');
+      if (!sections[section]) {
+        sections[section] = { '.type': '', '.name': section };
+      }
+      if (typeof prop === 'undefined') {
+        // first line, e.g. network.loopback=interface
+        sections[section]['.type'] = rhs;
+      } else {
+        // other lines, strip surrounding quotes
+        const val = rhs.replace(/^'(.*)'$/, '$1');
+        // accumulate lists if repeated props
+        if (sections[section][prop] !== undefined) {
+          if (!Array.isArray(sections[section][prop])) {
+            sections[section][prop] = [ sections[section][prop] ];
+          }
+          sections[section][prop].push(val);
+        } else {
+          sections[section][prop] = val;
+        }
+      }
+    });
+
+  // 3) emit each config block
+  for (const config of Object.values(sections)) {
+    outText += `config ${config['.type']} '${config['.name']}'\n`;
+    for (const [key, val] of Object.entries(config)) {
+      if (key.startsWith('.')) continue;
+      if (Array.isArray(val)) {
+        val.forEach(item => {
+          outText += `    list ${key} '${item}'\n`;
+        });
+      } else {
+        outText += `    option ${key} '${val}'\n`;
+      }
+    }
+    outText += `\n`;
+  }
+}
+
+// finally, dump into your <pre>
+output.text(outText.trim());
+        } catch (err) {
+          output.text(`Error: ${err.message}`);
+        }
+      });
+
+      // — Close handlers
+      closeBtn.on('click', hideModal);
+      $(window).on('click', e => {
+        if (e.target === modal[0]) hideModal();
+      });
+    });
+
+
+  
+
+
+  </script>
+
+
 {% endblock %}
+
+
+
+
 
 {% block submit_buttons_top %}{% submit_row %}{% endblock %}
 {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+
+
+
 
 {% block field_sets %}
 {% if not add %}
@@ -87,33 +204,56 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
             <a class="button" href="#overview-group">{% trans 'Overview' %}</a>
         </li>
         <li>
-            <a class="button" href="#sdlan-group">{% trans "SDLAN" %} Remote</a>
+            <a class="button" href="#sdlan-group">{% trans "SDLAN" %} </a>
         </li>
+        <li>
+            <a class="button" href="#real-time-monitoring">{% trans "" %} Traffic</a>
+        </li>
+        <li>
+            <a class="button" href="#events">{% trans "" %} Events</a>
+        </li>
+        
     </ul>
     <div class="tabs-divider"></div>
 
-
-    <!-- **UPDATED**: Single SDLAN Remote block (duplicate removed) -->
-    <div class="inline-group module aligned tab-content" id="sdlan-group" style="display:none;">
+     <div class="inline-group module aligned tab-content" id="sdlan-group" style="display:none;">
         <fieldset class="module aligned">
-          <h2>{% trans "SDLAN Remote" %}</h2>
-          <p>{% trans "Use this to open a per-device SSH tunnel via NPS." %}</p>
-  
-          <div class="form-row field-mac">
-            <label for="id_sdlan_mac">{% trans "Device MAC address" %}</label>
-            <input type="text" id="id_sdlan_mac" class="vTextField"
-                   value="{{ original.mac_address|default_if_none:'' }}" readonly />
-          </div>
-  
-          <div class="form-row field-local-port">
-            <label for="id_sdlan_port">{% trans "Local SSH port" %}</label>
-            <input type="number" id="id_sdlan_port" class="vIntegerField"
-                   value="22" min="1" max="65535" />
-          </div>
+        
   
           <div class="form-row field-action">
-            <button type="button" class="button" id="sdlan-open-btn">{% trans "Open SSH Tunnel" %}</button>
-            <button type="button" class="button" id="sdlan-open-existing-btn" style="display:none; margin-left:10px;">{% trans "Open Existing Tunnel" %}</button>{% trans "Open SSH Tunnel" %}</button>
+            <button type="submit" class="button" style="margin: 2px 5px;padding: 10px 10px;" id="sdlan-open-btn">{% trans "Open SSH Remote" %}</button>
+            <button type="submit" class="button" style="margin: 2px 5px;padding: 10px 10px;" id="sdlan-open-btn2">{% trans "Open SSH Terminal" %}</button>
+
+          </div>
+  
+          <div id="sdlan-result" class="help"></div>
+          <div id="sdlan-result2" class="help"></div>
+
+        </fieldset>
+      </div>
+
+
+      <div class="inline-group module aligned tab-content" id="events" style="display:none;">
+              <fieldset class="module aligned">
+        
+  
+                   {% include "admin/config/events.html" %}
+
+
+        </fieldset>
+      </div>
+
+ <div class="inline-group module aligned tab-content" id="real-time-monitoring" style="display:none;">
+        <fieldset class="module aligned">
+           {% include "admin/config/all_tab.html" %}
+
+      
+  
+    
+  
+          <div class="form-row field-action">
+            <!-- <button type="button" class="button" id="sdlan-open-btn">{% trans "Open SSH Tunnel" %}</button>
+            <button type="button" class="button" id="sdlan-open-existing-btn" style="display:none; margin-left:10px;">{% trans "Open Existing Tunnel" %}</button>{% trans "Open SSH Tunnel" %}</button> -->
 
           </div>
   
@@ -122,27 +262,74 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
       </div>
 
 
+      <div class="inline-group module aligned tab-content" id="security" style="display:none;">
+        <fieldset class="module aligned">
+        
+          
+  
+          {% include "admin/config/security_tab.html" %}
+
+  
+          <div class="form-row field-local-port">
+     
+            
+          </div>
+  
+        
+  
+          <div id="sdlan-result" class="help"></div>
+        </fieldset>
+      </div>
+      <div class="inline-group module aligned tab-content" id="real-time-traffic" style="display:none;">
+        <fieldset class="module aligned">
+         
+  
+          {% include "admin/config/real-time-traffic.html" %}
+
+  
+          <div class="form-row field-local-port">
+     
+           
+          </div>
+  
+        
+  
+          <div id="sdlan-result" class="help"></div>
+        </fieldset>
+      </div>
+ <div class="inline-group module aligned tab-content" id="wan-links" style="display:none;">
+        <fieldset class="module aligned">
+         
+  
+          {% include "admin/config/wan-links.html" %}
+
+  
+          <div class="form-row field-local-port">
+     
+           
+          </div>
+  
+        
+  
+          <div id="sdlan-result" class="help"></div>
+        </fieldset>
+      </div>
+
 </div>
-
-
-
 {% endif %}
 {{ block.super }}
 {% endblock %}
 
-{% block content %}
 
+
+
+
+
+{% block content %}
 <div class="{% if not add %}change-form{% else %}add-form{% endif %}">
     {{ block.super }}
-
-
-    <div class="djnjc-overlay" >
-        <div class="inner-group">
-            {% comment %} <fieldset class="module aligned current tab-content" id="sdlan-group">
-                <h2>{% trans "SDLAN Remote" %}</h2>
-                <p>nexapp sd-lan</p>
-            </fieldset> {% endcomment %}
-        </div>
+    <div class="djnjc-overlay">
+        <div class="inner"></div>
     </div>
 
     {% block default_templates_js %}
@@ -171,7 +358,11 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
     {% endblock %}
 
 
-    <script type="text/javascript">
+
+
+
+
+ <script type="text/javascript">
       console.log('SDLAN Remote script loaded1');
     
       django.jQuery(function($) {
@@ -192,34 +383,51 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
              return p;
            }
      
-           // Login
-           function apiLogin() {
-             return fetch(apiBase + '/login/verify', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify(creds)
-             }).then(r => {
-               if (!r.ok) throw new Error('Login failed');
-               return r.json();
-             }).then(j => j.token);
-           }
+ function apiLogin() {
+            // NPS expects form-urlencoded fields, not JSON
+            const form = new URLSearchParams();
+            form.append('username', creds.username);
+            form.append('password', creds.password);
+            return fetch(apiBase + '/login/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: form.toString()
+            })
+            
+        }
+
+     
      
            // Search client by MAC
            //<!-- **UPDATED**: returns {id, exists} based on rows.length -->
-     function apiSearchClient(token, mac) {
-             return fetch(apiBase + '/client/list', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-               body: JSON.stringify({ search: mac, order: 'asc', limit: 1 })
-             }).then(r => {
-               if (!r.ok) throw new Error('Search client failed');
-               return r.json();
-             }).then(j => {
-               var list = j.rows || j.data || [];
-               return { id: (list[0] && (list[0].Id || list[0].id)) || null, exists: list.length > 0 };
-             });
-           }
-     
+      function apiSearchClient(token, mac) {
+        // Mirror apiGetTunnel style using URLSearchParams and GET
+        var qs = new URLSearchParams({ search: mac, order: 'asc', limit: 10 });
+        return fetch(apiBase + '/client/list?' + qs.toString(), {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(function(res) {
+          if (!res.ok) throw new Error('Search client failed: ' + res.status);
+          return res.json();
+        })
+        .then(function(json) {
+          console.log('apiSearchClient response:', json);
+          var rows = json.rows || json.data || [];
+          var id = rows.length > 0 ? (rows[0].Id || rows[0].id) : null;
+          var exists = json.total > 0;
+          console.log('Parsed search result:', { id: id, exists: exists });
+          return { token: token, id: id, exists: exists };
+        });
+      }                                                                                                                                 
+
+        function apiDeleteClient(token, id) {
+          console.log('Deleting client ID:', id);
+          return fetch(`${apiBase}/client/del?id=${id}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
                        // Add client (using query string to ensure vkey is passed correctly)
           // <!-- **UPDATED**: use query string parameters for vkey and config_conn_allow -->
      function apiAddClient(token, mac) {
@@ -273,42 +481,119 @@ const commandsApiEndpoint = '{{ commands_api_endpoint|safe }}';
                return { ip: j.data && j.data.server_ip || window.location.hostname, port: j.data && j.data.port || extPort };
              });
            }
-                   function apiDeleteClient(token, clientId) {
-            return fetch(apiBase + '/client/del/', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ id: clientId })
-            }).then(r => { if (!r.ok) throw Error('Delete client failed'); return r.json(); });
+                  
+           
+
+           $('#sdlan-open-btn2').on('click', function(e) {
+  e.preventDefault();
+  // Inform user tunnel is being prepared
+  $('#sdlan-result2').html('<span class="sdlan-loader"></span> Hold on, opening tunnel for you...');
+
+  const targetPort = {{ sdlan_target_port|default:8022 }};
+
+  apiLogin()
+    .then(token => apiSearchClient(token, deviceMac))
+    .then(({ token, id, exists }) => {
+      if (exists && id) {
+        return apiDeleteClient(token, id)
+          .then(() => apiAddClient(token, deviceMac))
+          .then(clientId => ({ token, clientId }));
+      }
+      return apiAddClient(token, deviceMac).then(clientId => ({ token, clientId }));
+    })
+    .then(({ token, clientId }) =>
+      apiGetTunnel(token, clientId, targetPort).then(rows => {
+        const tunnel = rows.length ? rows[0] : null;
+        return tunnel
+          ? { token, clientId, tunnel }
+          : apiAddTunnel(token, clientId, targetPort).then(t => ({ token, clientId, tunnel: t }));
+      })
+    )
+    .then(({ token, clientId, tunnel }) => {
+      const destIp = tunnel.ip;
+      const destPort = tunnel.port;
+      const url = `http://${destIp}:${destPort}/`;
+
+      // Delay the actual opening in new tab to give user time to read message
+      setTimeout(() => {
+        const win = window.open(url, '_blank');
+        if (!win) {
+          $('#sdlan-result2').text('Error: popup blocked');
+        } else {
+          $('#sdlan-result2').text('Tunnel opened in a new tab.');
         }
-     
-           // Click handler
-         $('#sdlan-open-btn').click(function(e) {
-            e.preventDefault(); $('#sdlan-result').text('{% trans "Opening tunnel…" %}');
-            const target = 443;
-            apiLogin()
-              .then(token => apiSearchClient(token, deviceMac).then(res => ({ token, clientId: res.id, clientExists: res.exists })))
-              .then(ctx => ctx.clientExists ? ctx : apiAddClient(ctx.token, deviceMac).then(id => ({ token: ctx.token, clientId: id, clientExists: true })))
-              .then(ctx => apiGetTunnel(ctx.token, ctx.clientId, target).then(rows => {
-                  const existing = rows.find(r => String((r.Client&&r.Client.Id)||r.ClientId)===String(ctx.clientId) && String(r.Remark||r.TargetStr)===String(target));
-                  return existing ? { token: ctx.token, clientId: ctx.clientId, tunnel: { ip: existing.ServerIp||window.location.hostname, port: existing.Port } }
-                                     : apiAddTunnel(ctx.token, ctx.clientId, target).then(tun => ({ token: ctx.token, clientId: ctx.clientId, tunnel: tun }));
-              }))
-              .then(({ token, clientId, tunnel }) => {
-                  const remoteWin = window.open('https://' + tunnel.ip + ':' + tunnel.port + '/', '_blank');
-                  const watchCloser = setInterval(() => {
-                      if (remoteWin && remoteWin.closed) {
-                          clearInterval(watchCloser);
-                          apiDeleteClient(token, clientId)
-                            .then(j => console.log('Client deleted:', j))
-                            .catch(err => console.error('Error deleting client:', err));
-                      }
-                  }, 1000);
-              })
-              .catch(err => $('#sdlan-result').text('{% trans "Error:" %} ' + err.message));
-        });
+      }, 6000);
+
+      // Schedule cleanup after 4 minutes of inactivity
+      setTimeout(() => {
+        apiDeleteClient(token, clientId)
+          .catch(err => console.error('Cleanup failed:', err));
+      }, 240000);
+    })
+    .catch(err => $('#sdlan-result2').text('Error: ' + err.message));
+});
+
+      
+
+     // SDLAN Tunnel Handler with delayed redirect in a new tab and user message
+$('#sdlan-open-btn').on('click', function(e) {
+  e.preventDefault();
+  // Inform user tunnel is being prepared
+  $('#sdlan-result').html('<span class="sdlan-loader"></span> Hold on, opening tunnel for you...');
+
+  const targetPort = {{ sdlan_target_port|default:443 }};
+
+  apiLogin()
+    .then(token => apiSearchClient(token, deviceMac))
+    .then(({ token, id, exists }) => {
+      if (exists && id) {
+        return apiDeleteClient(token, id)
+          .then(() => apiAddClient(token, deviceMac))
+          .then(clientId => ({ token, clientId }));
+      }
+      return apiAddClient(token, deviceMac).then(clientId => ({ token, clientId }));
+    })
+    .then(({ token, clientId }) =>
+      apiGetTunnel(token, clientId, targetPort).then(rows => {
+        const tunnel = rows.length ? rows[0] : null;
+        return tunnel
+          ? { token, clientId, tunnel }
+          : apiAddTunnel(token, clientId, targetPort).then(t => ({ token, clientId, tunnel: t }));
+      })
+    )
+    .then(({ token, clientId, tunnel }) => {
+      const destIp = tunnel.ip;
+      const destPort = tunnel.port;
+      const url = `https://${destIp}:${destPort}/`;
+
+      // Delay the actual opening in new tab to give user time to read message
+      setTimeout(() => {
+        const win = window.open(url, '_blank');
+        if (!win) {
+          $('#sdlan-result').text('Error: popup blocked');
+        } else {
+          $('#sdlan-result').text('Tunnel opened in a new tab.');
+        }
+      }, 6000);
+
+      // Schedule cleanup after 4 minutes of inactivity
+      setTimeout(() => {
+        apiDeleteClient(token, clientId)
+          .catch(err => console.error('Cleanup failed:', err));
+      }, 240000);
+    })
+    .catch(err => $('#sdlan-result').text('Error: ' + err.message));
+});
+
     });
-        
 
+
+// get config code 
+
+    
     </script>
-</div>
 
+
+    
+</div>
 {% endblock %}

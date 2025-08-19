@@ -10,15 +10,15 @@ from django.utils import timezone
 from openwisp_notifications import types
 from openwisp_notifications.swapper import load_model, swapper_load_model
 from openwisp_utils.tasks import OpenwispCeleryTask
-
+import swapper
 User = get_user_model()
 
-Notification = load_model('Notification')
-NotificationSetting = load_model('NotificationSetting')
-IgnoreObjectNotification = load_model('IgnoreObjectNotification')
+Notification = swapper.load_model('openwisp_notifications','Notification')
+NotificationSetting = swapper.load_model('openwisp_notifications','NotificationSetting')
+IgnoreObjectNotification = swapper.load_model('openwisp_notifications','IgnoreObjectNotification')
 
-Organization = swapper_load_model('nexapp_users', 'Organization')
-OrganizationUser = swapper_load_model('nexapp_users', 'OrganizationUser')
+Organization = swapper.load_model('nexapp_users', 'Organization')
+OrganizationUser = swapper.load_model('nexapp_users', 'OrganizationUser')
 
 
 @shared_task(base=OpenwispCeleryTask)

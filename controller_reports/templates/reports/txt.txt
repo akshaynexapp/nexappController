@@ -1,0 +1,25 @@
+ /reports/events_report/  (main events report)
+
+/reports/logs_report/  (system/device logs)
+
+/reports/bandwidth_links/  (bandwidth usage per link)
+
+/reports/qos_sla/  (QoS & SLA metrics)
+
+/reports/availability/  (availability/outage records)
+
+/reports/faults/  (fault history)
+
+/reports/dpi/  (Deep Packet Inspection data)
+
+/reports/traffic_throughput/  (site throughput summary)
+
+/reports/network_performance/  (network KPIs)
+
+/reports/application_performance/  (app performance)
+
+/reports/sla_violations/  (SLA violation log)
+
+/reports/top_users/  (top consumers)
+
+/reports/cpe_health/  (CPE device health) 

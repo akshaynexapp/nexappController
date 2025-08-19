@@ -1,0 +1,32 @@
+{# ONLY the inside of the dashboard (no extends/base tags) #}
+<div id="dashboard-page">
+  <div id="dashboard-grid">
+    {% if dashboards %}
+      {% for d in dashboards %}
+        <a class="card-link" href="{{ d.href|default:'#' }}" title="{{ d.tooltip|default:d.name }}">
+          <div class="dashboard-card">
+            <div class="dashboard-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="color:#2563eb">
+                <ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M4 6v8c0 1.66 3.58 3 8 3s8-1.34 8-3V6" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M4 10c0 1.66 3.58 3 8 3s8-1.34 8-3" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+            </div>
+            <div class="dashboard-vstack">
+              <div class="dashboard-name">{{ d.name }}</div>
+              <div class="dashboard-meta">{{ d.meta }}</div>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    {% else %}
+      <div class="dashboard-card">
+        <div class="dashboard-icon">DB</div>
+        <div class="dashboard-vstack">
+          <div class="dashboard-name">AM_TestDomain_1</div>
+          <div class="dashboard-meta">AM_TestDomain_1 · Discoverer</div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>

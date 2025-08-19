@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tab Navigation</title>
+    <style>
+      /* Container */
+      #nav {
+        display: flex;
+        border-bottom: 1px solid #e2e8f0;
+        font-family: Inter, sans-serif;
+      }
+      /* Each tab */
+      #nav a {
+        padding: 12px 0;
+        margin-right: 32px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        color: #475467;
+        border-bottom: 2px solid transparent;
+        transition: color 0.2s ease;
+      }
+      /* Hover & active */
+      #nav a:hover,
+      #nav a.active {
+        color: #2563eb;
+      }
+      #nav a.active {
+        border-bottom-color: #2563eb;
+      }
+
+      /* Tab‐panes */
+      #tab-content .tab-pane {
+        display: none;
+      }
+      #tab-content .tab-pane.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <nav id="nav">
+      <a href="#" data-target="traffic" class="active">Traffic</a>
+      <a href="#wan-Links" data-target="wan-uplinks">WAN uplinks</a>
+      <a href="#" data-target="vpn">VPN</a>
+      <a href="#" data-target="security">Security</a>
+      <a href="#" data-target="realtime">Real-time traffic</a>
+    </nav>
+
+    <div id="tab-content">
+      <div id="traffic" class="tab-pane active">
+        {% include "admin/config/traffic_tab.html" %}
+      </div>
+      <div id="wan-uplinks" class="tab-pane">
+        {% include "admin/config/wan-links.html" %}
+      </div>
+      <div id="vpn" class="tab-pane">vpn</div>
+      <div id="security" class="tab-pane">
+        {% include "admin/config/security_tab.html" %}
+      </div>
+      <div id="realtime" class="tab-pane">
+        {% include "admin/config/real-time-traffic.html" %}
+      </div>
+    </div>
+
+    <script>
+      document.querySelectorAll("#nav a").forEach((link) => {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          // activate tab button
+          document.querySelector("#nav a.active").classList.remove("active");
+          this.classList.add("active");
+          // show corresponding pane
+          const prev = document.querySelector("#tab-content .tab-pane.active");
+          prev && prev.classList.remove("active");
+          document.getElementById(this.dataset.target).classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>

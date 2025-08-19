@@ -1,0 +1,31 @@
+{# controller_reports/templates/reports/device_health_report_pdf.html #}
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<style>
+  .table { width:100%; border-collapse:collapse; font-size:13px; }
+  .table th, .table td { border:1px solid #ccc; padding:6px; }
+  .table th { background:#f5f5f5; text-align:left; }
+</style>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Device Name</th>
+      <th>Serial No</th>
+      <th>Management IP</th>
+      <th>Memory Used (MB)</th>
+      <th>Uptime</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in devices %}
+    <tr>
+      <td>{{ d.device_name }}</td>
+      <td>{{ d.serial_no }}</td>
+      <td>{{ d.management_ip }}</td>
+      <td>{{ d.memory_used_mb }}</td>
+      <td>{{ d.uptime }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

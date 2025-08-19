@@ -1,0 +1,2660 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Traffic Overview</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+      .cards-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .card {
+        flex: 1 1 45% !important;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #111827;
+      }
+      .chart-wrapper {
+        position: relative;
+        height: 200px;
+        width: 100%;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left !important;
+
+        padding: 0.5rem;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      th {
+        text-align: left;
+        cursor: pointer;
+        color:cyan;
+        background: #f9fafb;
+      }
+      td:last-child {
+        text-align: right;
+      }
+      #protocolsearchInput , #localhostsearchInput, #applicationsearchInput, #remotehostsearchInput, #secondprotocolsearchInput, #secondapplicationsearchInput, #secondremotehostsearchInput {
+        margin-top: 10px;
+      margin-bottom: 2px;
+      padding: 5px;
+      width: 280px;
+    }
+    
+
+    /* Breadcrumb styles */
+.breadcrumb {
+  list-style: none;
+  display: flex;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+}
+.breadcrumb li + li:before {
+  content: "›";
+  margin: 0 0.5rem;
+  color: #6b7280;
+}
+.breadcrumb a {
+  text-decoration: none;
+  color: #3b82f6;
+}
+.breadcrumb .active {
+  color: #6b7280;
+  pointer-events: none;
+  cursor: default;
+}
+
+ /* Pagination settings container */
+  .pagination-settings {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 1em;
+    margin: 0.5em 0;
+  }
+
+  /* “Show” selector */
+  .pagination-settings label {
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+    font-size: 0.9em;
+  }
+
+  /* Info text (“6 – 10 of 20”) */
+  .pagination-info {
+    font-size: 0.9em;
+    color: #444;
+    white-space: nowrap;
+  }
+
+  /* Controls wrapper */
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+  }
+
+  /* Buttons */
+  .pagination-controls button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    padding: 0.25em 0.5em;
+    font-size: 0.9em;
+    border-radius: 0.25em;
+    cursor: pointer;
+  }
+  .pagination-controls button:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+  .pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  /* Active page */
+  .pagination-controls button.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+  }
+   tbody tr td:first-child {
+    color: #2563eb;
+    cursor: pointer;
+  }
+
+  .pagination-settings {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 20px;
+  justify-content: left;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  padding: 8px 0;
+}
+
+/* Info text */
+.pagination-info {
+  color: #475467;
+}
+
+/* Rows-per-page selector */
+.pagination-settings label {
+  display: flex;
+  align-items: center;
+  color: #475467;
+}
+.pagination-settings label select {
+  margin: 0 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid #CBD5E0;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  appearance: none;
+  cursor: pointer;
+}
+
+/* Prev / pages / Next container */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+}
+.pagination-controls button {
+  margin: 0 4px;
+  padding: 4px 12px;
+  font-size: 14px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  color: #475467;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.pagination-controls button:hover {
+  background-color: #F1F5F9;
+}
+.pagination-controls button:disabled {
+  color: #A0AEC0;
+  cursor: default;
+}
+.pagination-controls button.active,
+.pagination-controls button.active-page {
+  background-color: #E0EFFE;
+  border-color: #B2D4FF;
+  color: #2563EB;
+}
+
+    </style>
+  </head>
+  <body>
+<div id="apiError" style="display:none; color:#b91c1c; margin-bottom:1em;"></div>
+
+
+
+
+<nav aria-label="Breadcrumb" style="margin-top: 25px;">
+  <ol id="breadcrumb" class="breadcrumb"></ol>
+</nav>
+<!-- Traffic section -->
+
+<div style="display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;">
+    <div style="flex: 1 1 10%;">
+       
+       
+       <div style="
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  ">
+  <h3>Current Traffic</h3>
+  <p id="daily_total">loading ...</p>
+       </div>
+
+<!-- 2nd block -->
+
+<div
+  id="trafficDetail"
+  style="display: none;
+         background: #fff;
+         border: 1px solid #e5e7eb;
+         border-radius: 0.5rem;
+         padding: 1rem;
+         margin-bottom: 1rem;
+         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+  <h3 id="detailHeader">Current Traffic</h3>
+  <div id="detailContent">
+    <p>Loading…</p>
+  </div>
+</div>
+
+<!-- 3rd block -->
+<div
+  id="sideDataBlock"
+  style="
+    display: none;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  "
+>
+  <h3 id="sideDataLabel">Current Traffic</h3>
+  <p id="sideDataValue">838 MiB</p>
+</div>
+</div>
+    <!-- recent traffic -->
+    <div
+  class="card"
+  style="
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  "
+>
+  <h3 style="margin: 0 0 0.75rem; font-weight: bold;">Recent Traffic</h3>
+  <div style="position: relative; width: 100%; height: 255px; margin-bottom: 0.5rem;">
+    <canvas id="bar-traffic-chart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+</div>
+
+  </div>
+
+
+    <div id="firstpage" class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>Local Hosts</h3>
+        <div class="chart-wrapper">
+          <canvas id="pie-client-chart"></canvas>
+        </div>
+          <input
+    type="text"
+    id="localhostsearchInput"
+    placeholder="Filter"
+    onkeyup="filterTable()"
+  />
+        <table id="localhostTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+          </tbody>
+        </table>
+        <div class="pagination-settings">
+    <div class="pagination-info">
+      <span id="localhost-Info">0 – 0 of 0</span>
+    </div>
+    <label>
+      Show
+      <select id="localhostRowsPerPage" >
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+      </select>
+    </label>
+    <div id="localhost-Pagination" class="pagination-controls"></div>
+  </div>
+      </div>
+
+      <!-- Applications Card -->
+      <div class="card">
+        <h3>Applications</h3>
+        <div class="chart-wrapper">
+          <canvas id="pie-app-chart"></canvas>
+        </div>
+        <input
+    type="text"
+    id="applicationsearchInput"
+    placeholder="Filter"
+    onkeyup="applicationfilterTable()"
+  />
+        <table id="applicationTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+           
+          </tbody>
+        </table>
+
+
+     <div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="application-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="applicationRowsPerPage">
+      <option value="5">5</option>
+      <option value="10" selected>10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="application-pagination" class="pagination-controls"></div>
+</div>
+
+<!-- pagination controls -->
+
+      </div>
+      
+
+          <div class="card">
+        <h3>remote Hosts</h3>
+        <div class="chart-wrapper">
+          <canvas id="pie-remote-chart"></canvas>
+        </div>
+       <input
+    type="text"
+    id="remotehostsearchInput"
+    placeholder="Filter"
+    onkeyup="remotehostfilterTable()"
+  />
+        <table id="remotehostTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+          </tbody>
+        </table>
+        <div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="remoteHost-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="remoteHostRowsPerPage">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="remoteHost-pagination" class="pagination-controls"></div>
+</div>
+      </div>
+
+
+
+      <!-- protocol Card -->
+      <div class="card">
+        <h3>Protocol</h3>
+        <div class="chart-wrapper">
+          <canvas id="pie-protocol-chart"></canvas>
+        </div>
+     <input
+    type="text"
+    id="protocolsearchInput"
+    placeholder="Filter"
+    onkeyup="protocolfilterTable()"
+  />
+        <table id="protocolTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Protocol</th>
+            </tr>
+          </thead>
+          <tbody>
+           
+          </tbody>
+        </table>
+
+
+<div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="protocol-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="protocolRowsPerPage">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="protocol-pagination" class="pagination-controls"></div>
+</div>
+
+
+      </div>
+
+<!-- end of application -->
+
+
+    </div>
+
+    
+<div  id="secondpage" class="cards-container" style="display: none;">
+  <!-- Local Hosts Card (will show the single clicked client for reference) -->
+  <div id="secondlocalhostcard" class="card">
+    <h3>Local Host</h3>
+    <div class="chart-wrapper">
+      <canvas id="second-client-chart"></canvas>
+    </div>
+    <input
+    type="text"
+    id="secondremotehostsearchInput"
+    placeholder="Filter"
+    onkeyup="secondLocalhostfilterTable()"
+  />
+    <table id="secondlocalhostTable">
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Traffic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- We'll populate this with exactly one row: the clicked client and its total -->
+      </tbody>
+    </table>
+         <div class="pagination-settings">
+    <div class="pagination-info">
+      <span id="secondlocalhost-Info">0 – 0 of 0</span>
+    </div>
+    <label>
+      Show
+      <select id="secondlocalhostRowsPerPage" >
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+      </select>
+    </label>
+    <div id="secondlocalhost-Pagination" class="pagination-controls"></div>
+  </div>
+  </div>
+
+  <!-- Protocol Card -->
+  <div id="secondprotocolcard"  class="card">
+    <h3>Protocol</h3>
+    <div class="chart-wrapper">
+      <canvas id="second-protocol-chart"></canvas>
+
+    </div>
+    <input
+      type="text"
+      id="secondprotocolsearchInput"
+      placeholder="Filter"
+      onkeyup="secondprotocolfilterTable()"
+    />
+    <table id="secondprotocolTable">
+      <thead>
+        <tr>
+          <th>Protocol</th>
+          <th>Traffic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Populated with entry.data.protocol for the clicked client -->
+      </tbody>
+    </table>
+    
+<div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="secondprotocol-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="secondprotocolRowsPerPage">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="secondprotocol-pagination" class="pagination-controls"></div>
+</div>
+
+  </div>
+
+  <!-- Application Card -->
+  <div id="secondapplicationcard"  class="card">
+    <h3>Application</h3>
+    <div class="chart-wrapper">
+          <canvas id="second-application-chart"></canvas>
+
+    </div>
+    <input
+      type="text"
+      id="secondapplicationsearchInput"
+      placeholder="Filter"
+      onkeyup="secondapplicationfilterTable()"
+    />
+    <table id="secondapplicationTable">
+      <thead>
+        <tr>
+          <th>Application</th>
+          <th>Traffic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Populated with entry.data.application for the clicked client -->
+      </tbody>
+    </table>
+    <div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="secondapplication-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="secondapplicationRowsPerPage">
+      <option value="5">5</option>
+      <option value="10" selected>10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="secondapplication-pagination" class="pagination-controls"></div>
+</div>
+  </div>
+
+  <!-- Remote Hosts Card -->
+  <div id="secondremotehostcard"  class="card">
+    <h3>Remote Hosts</h3>
+    <div class="chart-wrapper">
+        <canvas id="second-remotehost-chart"></canvas>
+
+    </div>
+    <input
+      type="text"
+      id="secondremotehostsearchInput"
+      placeholder="Filter"
+      onkeyup="secondremotehostfilterTable()"
+    />
+    <table id="secondremotehostTable">
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th>Traffic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Populated with entry.data.host for the clicked client -->
+      </tbody>
+    </table>
+      <div class="pagination-settings">
+  <!-- Info text -->
+  <div class="pagination-info">
+    <span id="secondremoteHost-info">0 – 0 of 0</span>
+  </div>
+
+  <!-- Rows-per-page selector -->
+  <label>
+    Show
+    <select id="secondremoteHostRowsPerPage">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+    </select>
+  </label>
+
+  <!-- Prev / pages / Next -->
+  <div id="secondremoteHost-pagination" class="pagination-controls"></div>
+</div>
+  </div>
+</div>
+
+</body>
+
+
+<script  >
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // 1) Grab the device-ID from the URL
+    function formatTraffic(bytes) {
+    const GB = 1024 ** 3;
+    const MB = 1024 ** 2;
+    if (bytes >= GB) {
+      return (bytes / GB).toFixed(2) + ' GB';
+    }
+    return (bytes / MB).toFixed(2) + ' MB';
+  }
+  
+function formatBytes(bytes) {
+  if (bytes < 1024) {
+    return `${bytes} byte${bytes !== 1 ? 's' : ''}`;
+  }
+  const KB = 1024;
+  const MB = KB * 1024;
+  const GB = MB * 1024;
+
+  if (bytes < MB) {
+    return `${(bytes / KB).toFixed(2)} KB`;
+  } else if (bytes < GB) {
+    return `${(bytes / MB).toFixed(2)} MB`;
+  } else {
+    return `${(bytes / GB).toFixed(2)} GB`;
+  }
+}
+   const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL for WAN traffic chart");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/dpi_summary_v2/`;
+
+        // 2) Create AbortController + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((res) => {
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+              throw new Error(`API error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then((json) => {
+            const raw = json.latest_raw;
+            const hourly = json.latest_raw.hourly_traffic || [];
+      const apps = (json.latest_raw.applications) || [];
+      const hosts = (json.latest_raw.remote_hosts) || [];
+            const probs = (json.latest_raw.protocols) || [];
+      const localhosts = (json.latest_raw.clients) || [];
+
+
+        const all = raw;  
+// Daily  total traffic 
+document.getElementById('daily_total').textContent = formatTraffic(all.total_traffic);
+
+// recent traffic bar start
+         const labels = hourly.map(obj => obj.id.padStart(2,'0') + ':00');
+    const dataMiB = hourly.map(obj => (obj.traffic / (1024 * 1024)).toFixed(1));
+
+ new Chart(
+      document.getElementById('bar-traffic-chart').getContext('2d'),
+      {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Traffic (MiB)',
+            data: dataMiB,
+            backgroundColor: '#0891B2'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Time' },
+              ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 13 }
+            },
+            y: {
+              title: { display: true, text: 'MiB' },
+              min: 0,
+              // Optional: automatically set max so it fits your largest MiB
+            }
+          },
+          layout: {
+            padding: { left: 0, right: 0, top: 0, bottom: 0 }
+          }
+        }
+      }
+    );
+// recent traffic bar end
+
+
+// Application table 
+apps.sort((a, b) => b.traffic - a.traffic);
+ const topFive = apps.slice(0, 5);
+
+      // 5) Build pie chart labels & data (MiB) from topFive
+      const pieLabels = topFive.map(app => app.label);
+      const pieDataMiB = topFive.map(app => (app.traffic / (1024 * 1024)).toFixed(1));
+
+      // 6) Choose a color palette (5 colors) for the slices
+      const palette = [
+        "#06B6D4",
+        "#6366F1",
+        "#10B981",
+        "#EC4899",
+        "#F59E0B"
+      ];
+      const pieBackgroundColor = pieLabels.map((_, i) => palette[i % palette.length]);
+
+      
+      const ctx = document.getElementById("pie-app-chart").getContext("2d");
+       new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: pieLabels,
+          datasets: [
+            {
+              data: pieDataMiB,
+              backgroundColor: pieBackgroundColor,
+              borderColor: "#ffffff",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+      // 8) Populate the full, sorted applications table
+      const tbody = document.querySelector("#applicationTable tbody");
+      tbody.innerHTML = ""; // clear existing rows
+
+      apps.forEach((app) => {
+        const tr = document.createElement("tr");
+
+        // 8.a) Label cell
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = app.label;
+                           tdLabel.dataset.id = app.id;  
+
+        tr.appendChild(tdLabel);
+
+        // 8.b) Traffic cell (bytes → MiB, one decimal)
+        const tdTraffic = document.createElement("td");
+        tdTraffic.textContent = (app.traffic / (1024 * 1024)).toFixed(2) + " MB";
+        tr.appendChild(tdTraffic);
+
+        tbody.appendChild(tr);
+      });
+
+    //  Remote host table
+
+
+hosts.sort((a, b) => b.traffic - a.traffic);
+
+      // 4) Take top 5 for the pie chart
+      const topFiveHosts = hosts.slice(0, 5);
+
+      // 5) Build pie-chart labels & data (MiB)
+      const hostsLabels = topFiveHosts.map(h => h.id);
+      const hostsDataMiB = topFiveHosts.map(h => (h.traffic / (1024 * 1024)).toFixed(1));
+
+      // 6) Choose a 5-color palette
+      const hostspalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+      const backgroundColor = hostsLabels.map((_, i) => hostspalette[i % hostspalette.length]);
+
+      // 7) Render the pie chart inside #pie-remote-chart
+      const hostsctx = document.getElementById("pie-remote-chart").getContext("2d");
+      new Chart(hostsctx, {
+        type: "pie",
+        data: {
+          labels: hostsLabels,
+          datasets: [{
+            data: hostsDataMiB,
+            backgroundColor: backgroundColor,
+            borderColor: "#ffffff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: hostsctx => `${hostsctx.label}: ${hostsctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+      // 8) Populate the full, sorted remote-hosts table
+      const hosttbody = document.querySelector("#remotehostTable tbody");
+      hosttbody.innerHTML = ""; // clear existing rows
+
+      hosts.forEach(host => {
+        const tr = document.createElement("tr");
+
+        // Label cell
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = host.id;
+                   tdLabel.dataset.id = host.id;  
+
+        tr.appendChild(tdLabel);
+
+        // Traffic cell (bytes → MiB)
+        const tdTraffic = document.createElement("td");
+        tdTraffic.textContent = (host.traffic / (1024 * 1024)).toFixed(2) + " MB";
+        tr.appendChild(tdTraffic);
+
+        hosttbody.appendChild(tr);
+      });
+
+
+
+
+    // end of remote host table
+
+         //  Protocol table
+    
+
+ probs.sort((a, b) => b.traffic - a.traffic);
+
+      // 4) Take top 5 for the pie chart
+      const topFiveProbs = probs.slice(0, 5);
+
+      // 5) Build pie-chart labels & data (MiB)
+      const ProbspieLabels = topFiveProbs.map(p => p.label);
+      const ProbspieDataMiB = topFiveProbs.map(p => (p.traffic / (1024 * 1024)).toFixed(1));
+
+      // 6) Choose a 5-color palette
+      const Probspalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+      const ProbsbackgroundColor = ProbspieLabels.map((_, i) => Probspalette[i % Probspalette.length]);
+
+      // 7) Render the pie chart inside #pie-protocol-chart
+      const Probsctx = document.getElementById("pie-protocol-chart").getContext("2d");
+      new Chart(Probsctx, {
+        type: "pie",
+        data: {
+          labels: ProbspieLabels,
+          datasets: [{
+            data: ProbspieDataMiB,
+            backgroundColor: ProbsbackgroundColor,
+            borderColor: "#ffffff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (Probsctx) => `${Probsctx.label}: ${Probsctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+      // 8) Populate the full, sorted protocols table
+      const Probstbody = document.querySelector("#protocolTable tbody");
+      Probstbody.innerHTML = ""; // clear existing rows
+
+      probs.forEach(proto => {
+        const tr = document.createElement("tr");
+
+        // Label cell
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = proto.label;
+           tdLabel.dataset.id = proto.id;  
+        tr.appendChild(tdLabel);
+
+        // Traffic cell (bytes → MiB)
+        const tdTraffic = document.createElement("td");
+        tdTraffic.textContent = (proto.traffic / (1024 * 1024)).toFixed(2) + " MB";
+        tr.appendChild(tdTraffic);
+
+        Probstbody.appendChild(tr);
+      });
+
+// end of protocol table
+
+
+
+// localhost table
+
+
+
+const topFivelocalHosts = localhosts.slice(0, 5);
+
+      // 5) Build pie-chart labels & data (MiB)
+      const localpieLabels = topFivelocalHosts.map(h => h.label);
+      const localpieDataMiB = topFivelocalHosts.map(h => (h.traffic / (1024 * 1024)).toFixed(1));
+
+      // 6) Choose a 5-color palette
+      const localpalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+      const localbackgroundColor = localpieLabels.map((_, i) => localpalette[i % localpalette.length]);
+
+      // 7) Render the pie chart inside #pie-client-chart
+      const localctx = document.getElementById("pie-client-chart").getContext("2d");
+      new Chart(localctx, {
+        type: "pie",
+        data: {
+          labels: localpieLabels,
+          datasets: [{
+            data: localpieDataMiB,
+            backgroundColor: localbackgroundColor,
+            borderColor: "#ffffff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: localctx => `${localctx.label}: ${localctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+      // 8) Populate the full, sorted clients table
+      const localtbody = document.querySelector("#localhostTable tbody");
+      localtbody.innerHTML = ""; // clear existing rows
+
+      localhosts.forEach(host => {
+        const tr = document.createElement("tr");
+
+        // Label cell
+        const tdLabel = document.createElement("td");
+        tdLabel.textContent = host.label;
+        tdLabel.dataset.id = host.id;
+        tr.appendChild(tdLabel);
+
+        // Traffic cell (bytes → MiB)
+        const tdTraffic = document.createElement("td");
+        tdTraffic.textContent = (host.traffic / (1024 * 1024)).toFixed(2) + " MB";
+        tr.appendChild(tdTraffic);
+
+        localtbody.appendChild(tr);
+      });
+
+
+
+// end of localhost table
+
+
+
+
+// application table pagination (firstpage)
+
+const allApps = apps.slice(); // copy to avoid accidental mutation
+
+  // State variables:
+  let currentPage = 1;
+  let rowsPerPage = parseInt(document.getElementById("applicationRowsPerPage").value, 10);
+
+  function renderTable() {
+    const tbody = document.querySelector("#applicationTable tbody");
+    tbody.innerHTML = ""; // clear existing rows
+
+    // 2.a) Calculate startIndex / endIndex based on page & rowsPerPage
+    const totalItems = allApps.length;
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    let endIndex = startIndex + rowsPerPage;
+    if (endIndex > totalItems) endIndex = totalItems;
+
+    // 2.b) Populate rows [startIndex … endIndex-1]
+    for (let i = startIndex; i < endIndex; i++) {
+      const app = allApps[i];
+      const tr = document.createElement("tr");
+
+      // Label cell
+      const tdLabel = document.createElement("td");
+      tdLabel.textContent = app.label;
+       tdLabel.dataset.id = app.id;  
+      tr.appendChild(tdLabel);
+
+      // Traffic cell (bytes → MiB, two decimals)
+      const tdTraffic = document.createElement("td");
+      tdTraffic.textContent = (app.traffic / (1024 * 1024)).toFixed(2) + " MB";
+      tr.appendChild(tdTraffic);
+
+      tbody.appendChild(tr);
+    }
+
+    // 2.c) Update “info” text: “start – end of total”
+    //          For example: “6 – 10 of 42”
+    const infoText = document.getElementById("application-info");
+    if (totalItems === 0) {
+      infoText.textContent = "0 – 0 of 0";
+    } else {
+      infoText.textContent = `${startIndex + 1} – ${endIndex} of ${totalItems}`;
+    }
+  }
+
+  
+  function renderPaginationControls() {
+    const paginationDiv = document.getElementById("application-pagination");
+    paginationDiv.innerHTML = ""; // clear existing buttons
+
+    const totalItems = allApps.length;
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+
+    // Helper: Create a button
+    function createButton(label, disabled, clickHandler) {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.classList.add("page-btn");
+      btn.addEventListener("click", clickHandler);
+      return btn;
+    }
+
+    // 3.a) “Prev” button
+    const prevBtn = createButton("Prev", currentPage === 1, () => {
+      if (currentPage > 1) {
+        currentPage--;
+        updatePagination(); 
+      }
+    });
+    paginationDiv.appendChild(prevBtn);
+
+    // 3.b) Page number buttons (for simplicity, show 1..totalPages)
+    //     If you have a LOT of pages, you could collapse this (e.g., “1 … 5 6 7 … 20”)
+    for (let page = 1; page <= totalPages; page++) {
+      const isActive = page === currentPage;
+      const btn = createButton(page, isActive, () => {
+        currentPage = page;
+        updatePagination();
+      });
+      if (isActive) {
+        btn.classList.add("active-page");
+      }
+      paginationDiv.appendChild(btn);
+    }
+
+    // 3.c) “Next” button
+    const nextBtn = createButton("Next", currentPage === totalPages || totalPages === 0, () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        updatePagination();
+      }
+    });
+    paginationDiv.appendChild(nextBtn);
+  }
+
+  function updatePagination() {
+    renderTable();
+    renderPaginationControls();
+  }
+
+
+  document.getElementById("applicationRowsPerPage").addEventListener("change", (e) => {
+    rowsPerPage = parseInt(e.target.value, 10);
+    currentPage = 1;
+    updatePagination();
+  });
+
+
+  updatePagination();
+
+
+
+
+
+
+
+
+
+ 
+// --pagination
+const allHosts = hosts.slice(); // copy to avoid accidental mutation
+const allProbs = probs.slice(); // copy to avoid accidental mutation
+const allLocalhosts = localhosts.slice(); // copy to avoid accidental mutation
+ let hostcurrentPage = 1;
+  let probscurrentPage = 1;
+  let localHostcurrentPage = 1;
+ let probsrowsPerPage = parseInt(document.getElementById("protocolRowsPerPage").value, 10);
+  let hostsrowsPerPage = parseInt(document.getElementById("remoteHostRowsPerPage").value, 10);
+  let localHostrowsPerPage = parseInt(document.getElementById("localhostRowsPerPage").value, 10);
+  
+  const hostspaginationDiv = document.getElementById("remoteHost-pagination");
+
+  const hoststbody = document.querySelector("#remotehostTable tbody");
+
+  // const appinfoText = document.getElementById("application-info");
+  const hostsinfoText = document.getElementById("remoteHost-info");
+
+
+
+// ––– Protocol table –––
+function renderProbsTable() {
+    const probstbody = document.querySelector("#protocolTable tbody");
+
+  probstbody.innerHTML = "";
+  const total    = allProbs.length;
+  const startIdx = (probscurrentPage - 1) * probsrowsPerPage;
+  const endIdx   = Math.min(startIdx + probsrowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const p   = allProbs[i];
+    const tr  = document.createElement("tr");
+    // adjust these cells to match your `probs` shape:
+    const td1 = document.createElement("td");
+    td1.textContent = p.label;
+    td1.dataset.id = p.id;
+    tr.appendChild(td1);
+
+    const td2 = document.createElement("td");
+    td2.textContent = (p.traffic / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    probstbody.appendChild(tr);
+  }
+  const probsinfoText = document.getElementById("protocol-info");
+
+  probsinfoText.textContent = total === 0
+    ? "0 – 0 of 0"
+    : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+function renderProbsPaginationControls() {
+    const probspaginationDiv = document.getElementById("protocol-pagination");
+
+  probspaginationDiv.innerHTML = "";
+  const totalPages = Math.ceil(allProbs.length / probsrowsPerPage);
+
+  function btn(label, disabled, fn) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  probspaginationDiv.appendChild(
+    btn("Prev", probscurrentPage === 1, () => {
+      probscurrentPage--;
+      probsupdatePagination();
+    }))
+  ;
+
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === probscurrentPage;
+    const b = btn(p, isActive, () => {
+      probscurrentPage = p;
+      probsupdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    probspaginationDiv.appendChild(b);
+  }
+
+  probspaginationDiv.appendChild(
+    btn("Next", probscurrentPage === totalPages || totalPages === 0, () => {
+      probscurrentPage++;
+      probsupdatePagination();
+    }))
+  ;
+}
+
+function probsupdatePagination() {
+  renderProbsTable();
+  renderProbsPaginationControls();
+}
+
+document.getElementById("protocolRowsPerPage").addEventListener("change", (e) => {
+    probsrowsPerPage = parseInt(e.target.value, 10);
+    probscurrentPage = 1;
+    probsupdatePagination();
+  });
+
+probsupdatePagination()
+
+
+// remotehosts table pagination
+function renderHostsTable() {
+  hoststbody.innerHTML = "";
+  const total    = allHosts.length;
+  const startIdx = (hostcurrentPage - 1) * hostsrowsPerPage;
+  const endIdx   = Math.min(startIdx + hostsrowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const h  = allHosts[i];
+    const tr = document.createElement("tr");
+
+    // Column 1: adjust to match your host object
+    const td1 = document.createElement("td");
+    td1.textContent = h.id;      // ← or h.label if that’s your property
+    td1.dataset.id   = h.id;
+    tr.appendChild(td1);
+
+    // Column 2: adjust to match your host object
+    const td2 = document.createElement("td");
+        td2.textContent = (h.traffic / (1024 * 1024)).toFixed(2) + " MB";   // ← or h.traffic etc.
+    tr.appendChild(td2);
+
+    hoststbody.appendChild(tr);
+  }
+
+  // Update info (“start – end of total”)
+  hostsinfoText.textContent = total === 0
+    ? "0 – 0 of 0"
+    : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+function renderHostsPaginationControls() {
+  hostspaginationDiv.innerHTML = "";
+  const totalPages = Math.ceil(allHosts.length / hostsrowsPerPage);
+
+  function btn(label, disabled, fn) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  // Prev
+  hostspaginationDiv.appendChild(
+    btn("Prev", hostcurrentPage === 1, () => {
+      hostcurrentPage--;
+      hostsupdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === hostcurrentPage;
+    const b = btn(p, isActive, () => {
+      hostcurrentPage = p;
+      hostsupdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    hostspaginationDiv.appendChild(b);
+  }
+
+  // Next
+  hostspaginationDiv.appendChild(
+    btn("Next", hostcurrentPage === totalPages || totalPages === 0, () => {
+      hostcurrentPage++;
+      hostsupdatePagination();
+    }))
+  ;
+}
+
+function hostsupdatePagination() {
+  renderHostsTable();
+  renderHostsPaginationControls();
+}
+
+// ––– wire up the “rows per page” dropdown –––
+document.getElementById("remoteHostRowsPerPage")
+  .addEventListener("change", e => {
+    hostsrowsPerPage = parseInt(e.target.value, 10);
+    hostcurrentPage  = 1;
+    hostsupdatePagination();
+  });
+
+// ––– kick it off on load –––
+hostsupdatePagination();
+
+const localhosttbody         = document.querySelector("#localhostTable tbody");
+const localhostinfoText      = document.getElementById("localhost-Info");
+const localhostpaginationDiv = document.getElementById("localhost-Pagination");
+
+// Render the table rows
+function renderLocalhostsTable() {
+  localhosttbody.innerHTML = "";
+  const total    = allLocalhosts.length;
+  const startIdx = (localHostcurrentPage - 1) * localHostrowsPerPage;
+  const endIdx   = Math.min(startIdx + localHostrowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const l  = allLocalhosts[i];
+    const tr = document.createElement("tr");
+
+    // Column 1: Label
+    const td1 = document.createElement("td");
+    td1.textContent    = l.label;
+    td1.dataset.id     = l.id;
+    tr.appendChild(td1);
+
+    // Column 2: Traffic in MiB
+    const td2 = document.createElement("td");
+    td2.textContent = (l.traffic / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    localhosttbody.appendChild(tr);
+  }
+
+  // Update “X – Y of Z”
+  localhostinfoText.textContent = total === 0
+    ? "0 – 0 of 0"
+    : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+// Render the Prev / pages / Next buttons
+function renderLocalhostsPaginationControls() {
+  localhostpaginationDiv.innerHTML = "";
+  const totalPages = Math.ceil(allLocalhosts.length / localHostrowsPerPage);
+
+  function btn(label, disabled, onClick) {
+    const b = document.createElement("button");
+    b.textContent    = label;
+    b.disabled       = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // Prev
+  localhostpaginationDiv.appendChild(
+    btn("Prev", localHostcurrentPage === 1, () => {
+      localHostcurrentPage--;
+      localhostsupdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === localHostcurrentPage;
+    const b = btn(p, isActive, () => {
+      localHostcurrentPage = p;
+      localhostsupdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    localhostpaginationDiv.appendChild(b);
+  }
+
+  // Next
+  localhostpaginationDiv.appendChild(
+    btn("Next", localHostcurrentPage === totalPages || totalPages === 0, () => {
+      localHostcurrentPage++;
+      localhostsupdatePagination();
+    }))
+  ;
+}
+
+// Kick off both table + controls
+function localhostsupdatePagination() {
+  renderLocalhostsTable();
+  renderLocalhostsPaginationControls();
+}
+
+// Handle rows-per-page changes
+document.getElementById("localhostRowsPerPage")
+  .addEventListener("change", e => {
+    localHostrowsPerPage   = parseInt(e.target.value, 10);
+    localHostcurrentPage   = 1;
+    localhostsupdatePagination();
+  });
+
+// Initial render
+localhostsupdatePagination();
+   
+      })
+     
+      .catch((err) => {
+            clearTimeout(timeoutId); // <— also clear on error
+            if (err.name === "AbortError") {
+              console.error("Fetch aborted (timeout)");
+            } else {
+              console.error("Fetch failed:", err);
+            }
+          })
+  });
+
+  
+  </script>
+
+
+<script  >
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+let dpiSummary = null;
+
+function formatBytes(bytes) {
+  if (bytes < 1024) {
+    return `${bytes} byte${bytes !== 1 ? 's' : ''}`;
+  }
+  const KB = 1024;
+  const MB = KB * 1024;
+  const GB = MB * 1024;
+
+  if (bytes < MB) {
+    return `${(bytes / KB).toFixed(2)} KB`;
+  } else if (bytes < GB) {
+    return `${(bytes / MB).toFixed(2)} MB`;
+  } else {
+    return `${(bytes / GB).toFixed(2)} GB`;
+  }
+}
+
+const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL for WAN traffic chart");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/dpi_client_summary/`;
+
+        // 2) Create AbortController + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((res) => {
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+              throw new Error(`API error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then((json) => {
+             dpiSummary = json.latest_raw; 
+                   console.log("dpiSummary:", JSON.stringify(dpiSummary));
+
+      })
+         .catch((err) => {
+            clearTimeout(timeoutId); // <— also clear on error
+            if (err.name === "AbortError") {
+              console.error("Fetch aborted (timeout)");
+            } else {
+              console.error("Fetch failed:", err);
+            }
+          })
+  
+
+const firstPage       = document.getElementById("firstpage");
+const secondPage      = document.getElementById("secondpage");
+const sideDataBlock   = document.getElementById("sideDataBlock");
+  const secondprotocolcard = document.getElementById("secondprotocolcard");
+  const secondapplicationcard = document.getElementById("secondapplicationcard");
+  const secondremotehostcard = document.getElementById("secondremotehostcard");
+  const secondlocalhostcard = document.getElementById("secondlocalhostcard");
+const trafficDetailDiv = document.getElementById("trafficDetail");
+  const detailHeader     = document.getElementById("detailHeader");
+  const detailContent    = document.getElementById("detailContent");
+    let currentClientLabel = "";
+  let currentSubSection = "";
+let currentClientValue = "";
+  const breadcrumb = document.getElementById("breadcrumb");
+
+  // Rebuilds the breadcrumb as:
+function updateBreadcrumb(level1 = "Traffic Overview", level2 = null, level3 = null) {
+  breadcrumb.innerHTML = "";
+console.log("updateBreadcrumb called with:", level1, level2, level3);
+  const createCrumb = (label, dataAttr = null) => {
+    const li = document.createElement("li");
+    if (dataAttr) {
+      li.innerHTML = `<a href="javascript:void(0);" data-level="${dataAttr}">${label}</a>`;
+    } else {
+      li.textContent = label;
+    }
+    return li;
+  };
+
+  breadcrumb.appendChild(createCrumb(level1, "overview"));
+  if (level2) breadcrumb.appendChild(createCrumb(level2, "client"));
+  if (level3) breadcrumb.appendChild(createCrumb(level3));
+}
+
+
+document.getElementById("breadcrumb").addEventListener("click", (e) => {
+  const link = e.target.closest("a[data-level]");
+  if (!link) return;
+
+  const level = link.dataset.level;
+  if (level === "overview") {
+    // Go back to main page
+    currentClientLabel = "";
+    currentClientValue = "";
+    currentSubSection = "";
+    firstPage.style.display = "block";
+    secondPage.style.display = "none";
+    trafficDetailDiv.style.display = "none";
+    sideDataBlock.style.display = "none";
+    updateBreadcrumb();
+  } else if (level === "client") {
+    // Go back to client detail
+    currentSubSection = "";
+    showDetailBlock(currentClientLabel, currentClientValue);
+    sideDataBlock.style.display = "none";
+    updateBreadcrumb("Traffic Overview", currentClientLabel);
+  }
+});
+
+
+  // Attach one delegated listener on each table’s <tbody>.
+
+  const tableIds = [
+    "applicationTable",
+    "localhostTable",
+    "remotehostTable",
+    "protocolTable"
+  ];
+
+  tableIds.forEach(tblId => {
+    const table = document.getElementById(tblId);
+    if (!table) return;
+    table.querySelector("tbody").addEventListener("click", event => {
+      const td = event.target.closest("td");
+      if (!td) return;
+
+      // Only proceed if it’s the first column (Label)
+      const colIndex = Array.from(td.parentElement.children).indexOf(td);
+      if (colIndex !== 0) return;
+
+      const clickedLabel = td.textContent.trim();
+      if (!clickedLabel) return;
+      const clickedId = td.dataset.id;
+             const trafficValue = td.parentElement.querySelectorAll("td")[1].textContent.trim();    
+
+ currentClientLabel = clickedLabel;
+    currentClientValue = trafficValue;
+    currentSubSection = "";
+
+    // Show details and update UI
+    showDetailBlock(clickedLabel, trafficValue);
+    updateBreadcrumb("Traffic Overview", clickedLabel);
+    secondpageupdate(clickedId); // Call your existing second page function
+    });
+  });
+ 
+  // 3) Helper to show trafficDetailDiv and populate its header
+  function showDetailBlock(clientLabel,trafficValue) {
+        firstPage.style.display = "none";
+secondPage.style.display = "block";
+    // a) Unhide the block
+    trafficDetailDiv.style.display = "block";
+    // b) Update the <h3> inside it
+    detailHeader.textContent = `Traffic details for ${clientLabel}`;
+    // c) Clear old content and show “Loading…”
+    detailContent.innerHTML = `<p>${trafficValue}</p>`;
+  }
+
+
+
+
+function secondpageupdate(clickedLabel) {
+  const clickableValue = clickedLabel.toLowerCase();
+function lookupByClickable(clickableValue) {
+  console.log("lookupByClickable called with:", clickableValue);
+  // 1) If it's a client IP, return its full data:
+  const exactMatch = dpiSummary.find(entry => entry.client === clickableValue);
+  if (exactMatch) {
+    return { type: "clientData", payload: exactMatch };
+  }
+  // 2) Otherwise, find all entries where protocol/app/host has >0 for that key
+  const matches = dpiSummary
+    .filter(entry => {
+      const { protocol = {}, application = {}, host = {} } = entry.data;
+      return (
+        (protocol[clickableValue] || 0) > 0 ||
+        (application[clickableValue] || 0) > 0 ||
+        (host[clickableValue] || 0) > 0
+      );
+    })
+    .map(entry => ({
+      client: entry.client,
+      total: entry.data.total
+    }));
+
+  console.log("matches", matches);
+  return { payload: matches };
+}
+    const resultA = lookupByClickable(clickableValue);
+   if (resultA.type == "clientData") {
+  
+secondlocalhostcard.style.display ="none"
+secondprotocolcard.style.display ="flex"
+secondapplicationcard.style.display ="flex"
+secondremotehostcard.style.display ="flex"
+
+
+
+  
+} else {
+secondlocalhostcard.style.display ="flex"
+secondprotocolcard.style.display ="none"
+secondapplicationcard.style.display ="none"
+secondremotehostcard.style.display ="none"
+
+console.log("resultA", resultA);
+
+  // 2) Populate its table with that one client
+  const payload = resultA.payload || [];
+
+  const tableBody = document.querySelector("#secondlocalhostTable tbody");
+tableBody.innerHTML = "";  // clear old rows
+
+payload.forEach(({ client, total }) => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${client}</td>
+    <td>${(total / (1024**2)).toFixed(2)} MB</td>
+  `;
+  tableBody.appendChild(tr);
+});
+
+
+
+
+  const clientsWithTotals = payload.slice().sort((a, b) => b.total - a.total);
+  clientsWithTotals.sort((a, b) => b.total - a.total);
+const topFivelocalHosts = clientsWithTotals.slice(0, 5);
+console.log("topFivelocalHosts", topFivelocalHosts)
+      // 5) Build pie-chart labels & data (MiB)
+      const localpieLabels = topFivelocalHosts.map(h => h.client);
+      const localpieDataMiB = topFivelocalHosts.map(h => (h.total / (1024 * 1024)).toFixed(1));
+
+      // 6) Choose a 5-color palette
+      const localpalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+      const localbackgroundColor = localpieLabels.map((_, i) => localpalette[i % localpalette.length]);
+
+      // 7) Render the pie chart inside #pie-client-chart
+      const localctx = document.getElementById("second-client-chart").getContext("2d");
+      new Chart(localctx, {
+        type: "pie",
+        data: {
+          labels: localpieLabels,
+          datasets: [{
+            data: localpieDataMiB,
+            backgroundColor: localbackgroundColor,
+            borderColor: "#ffffff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: localctx => `${localctx.label}: ${localctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+const clientTbody = document.querySelector("#secondlocalhostTable tbody");
+clientTbody.innerHTML = "";
+
+clientsWithTotals.forEach(({ client, total }) => {
+  const tr = document.createElement("tr");
+
+  const tdClient = document.createElement("td");
+  tdClient.textContent = client;
+  tr.appendChild(tdClient);
+
+  const tdTotal = document.createElement("td");
+  tdTotal.textContent = (total );
+  tr.appendChild(tdTotal);
+
+  clientTbody.appendChild(tr);
+});
+
+const allSecondLocalhosts = clientsWithTotals.slice();
+console.log("clint", allSecondLocalhosts)
+
+// 2️⃣ State
+let secondLocalhostCurrentPage = 1;
+let secondLocalhostRowsPerPage  = parseInt(
+  document.getElementById("secondlocalhostRowsPerPage").value,
+  10
+);
+
+// 3️⃣ Grab DOM elements
+const secondLocalhostTbody         = document.querySelector("#secondlocalhostTable tbody");
+const secondLocalhostInfoText      = document.getElementById("secondlocalhost-Info");
+const secondLocalhostPaginationDiv = document.getElementById("secondlocalhost-Pagination");
+
+// 4️⃣ Render the table rows
+function renderSecondLocalhostsTable() {
+  secondLocalhostTbody.innerHTML = "";
+
+  const total    = allSecondLocalhosts.length;
+  const startIdx = (secondLocalhostCurrentPage - 1) * secondLocalhostRowsPerPage;
+  const endIdx   = Math.min(startIdx + secondLocalhostRowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const entry = allSecondLocalhosts[i];
+    const tr    = document.createElement("tr");
+
+    // Column 1: client
+    const td1 = document.createElement("td");
+    td1.textContent = entry.client;
+    td1.dataset.id  = entry.client;
+    tr.appendChild(td1);
+
+    // Column 2: total → MiB
+    const td2 = document.createElement("td");
+    td2.textContent = (entry.total / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    secondLocalhostTbody.appendChild(tr);
+  }
+
+  // Update “X – Y of Z”
+  secondLocalhostInfoText.textContent =
+    total === 0
+      ? "0 – 0 of 0"
+      : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+// 5️⃣ Render pagination controls
+function renderSecondLocalhostsPaginationControls() {
+  secondLocalhostPaginationDiv.innerHTML = "";
+  const totalPages = Math.ceil(allSecondLocalhosts.length / secondLocalhostRowsPerPage);
+
+  function btn(label, disabled, onClick) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // Prev
+  secondLocalhostPaginationDiv.appendChild(
+    btn("Prev", secondLocalhostCurrentPage === 1, () => {
+      secondLocalhostCurrentPage--;
+      secondLocalhostsUpdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === secondLocalhostCurrentPage;
+    const b = btn(p, isActive, () => {
+      secondLocalhostCurrentPage = p;
+      secondLocalhostsUpdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    secondLocalhostPaginationDiv.appendChild(b);
+  }
+
+  // Next
+  secondLocalhostPaginationDiv.appendChild(
+    btn("Next", secondLocalhostCurrentPage === totalPages || totalPages === 0, () => {
+      secondLocalhostCurrentPage++;
+      secondLocalhostsUpdatePagination();
+    }))
+  ;
+}
+
+// 6️⃣ Combine render calls
+function secondLocalhostsUpdatePagination() {
+  renderSecondLocalhostsTable();
+  renderSecondLocalhostsPaginationControls();
+}
+
+// 7️⃣ Wire up rows-per-page selector
+document.getElementById("secondlocalhostRowsPerPage")
+  .addEventListener("change", e => {
+    secondLocalhostRowsPerPage    = parseInt(e.target.value, 10);
+    secondLocalhostCurrentPage   = 1;
+    secondLocalhostsUpdatePagination();
+  });
+
+// 8️⃣ Initial render
+secondLocalhostsUpdatePagination();
+
+
+}
+ // secondpage protocol table
+const protoTbody = document.querySelector("#secondprotocolTable tbody");
+protoTbody.innerHTML = ""; // clear any existing rows
+
+// 1) Get entries as [protoName, bytes] array
+const protoEntries = Object.entries(resultA.payload?.data?.protocol || {});
+
+// 2) Sort descending by bytes
+protoEntries.sort((a, b) => b[1] - a[1]);
+console.log("protoEntries",protoEntries[0]);
+// 3) Now append rows in sorted order
+protoEntries.forEach(([protoName, bytes]) => {
+  const tr = document.createElement("tr");
+
+  const tdProto = document.createElement("td");
+  tdProto.textContent = protoName;
+  tr.appendChild(tdProto);
+
+  const tdTraffic = document.createElement("td");
+  tdTraffic.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  tr.appendChild(tdTraffic);
+
+  protoTbody.appendChild(tr);
+});
+ 
+
+  // secondpage application table
+const secondapplicationTbody = document.querySelector("#secondapplicationTable tbody");
+secondapplicationTbody.innerHTML = ""; // clear any existing rows
+
+// 1) Get entries as [protoName, bytes] array
+const secondapplicationEntries = Object.entries(resultA.payload?.data?.application || {});
+
+// 2) Sort descending by bytes
+secondapplicationEntries.sort((a, b) => b[1] - a[1]);
+console.log("secondapplicationEntries",secondapplicationEntries[0]);
+// 3) Now append rows in sorted order
+secondapplicationEntries.forEach(([appName, bytes]) => {
+  const tr = document.createElement("tr");
+
+  const tdApp = document.createElement("td");
+  tdApp.textContent = appName;
+  tr.appendChild(tdApp);
+
+  const tdTraffic = document.createElement("td");
+  tdTraffic.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  tr.appendChild(tdTraffic);
+
+  secondapplicationTbody.appendChild(tr);
+});
+
+
+
+  // secondpage application table
+const secondhostTbody = document.querySelector("#secondremotehostTable tbody");
+secondhostTbody.innerHTML = ""; // clear any existing rows
+
+// 1) Get entries as [protoName, bytes] array
+const secondhostEntries = Object.entries(resultA.payload?.data?.host || {});
+
+// 2) Sort descending by bytes
+secondhostEntries.sort((a, b) => b[1] - a[1]);
+console.log("secondhostEntries",secondhostEntries[0]);
+// 3) Now append rows in sorted order
+secondhostEntries.forEach(([hostName, bytes]) => {
+  const tr = document.createElement("tr");
+
+  const tdhost = document.createElement("td");
+  tdhost.textContent = hostName;
+  tr.appendChild(tdhost);
+
+  const tdTraffic = document.createElement("td");
+  tdTraffic.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  tr.appendChild(tdTraffic);
+
+  secondhostTbody.appendChild(tr);
+});
+
+// Second application pie chart
+      const topFiveApps = secondapplicationEntries.slice(0, 5);
+     
+const apppielabels = topFiveApps.map(([appName, bytes]) => appName);
+const apppiedataMiB = topFiveApps.map(([appName, bytes]) =>
+  (bytes / (1024 * 1024)).toFixed(1)
+);
+
+// 3) Pick a simple color palette (one color per slice)
+const apppalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+const appbackgroundColor = apppielabels.map((_, i) => apppalette[i % apppalette.length]);
+      
+       new Chart(document.getElementById("second-application-chart").getContext("2d"), {
+        type: "pie",
+        data: {
+          labels: apppielabels,
+          datasets: [
+            {
+              data: apppiedataMiB,
+              backgroundColor: appbackgroundColor,
+              borderColor: "#ffffff",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+
+// Second prototcol pie chart
+      const topFiveProto = protoEntries.slice(0, 5);
+     
+const protopielabels = topFiveProto.map(([appName, bytes]) => appName);
+const protopiedataMiB = topFiveProto.map(([appName, bytes]) =>
+  (bytes / (1024 * 1024)).toFixed(1)
+);
+
+// 3) Pick a simple color palette (one color per slice)
+const protopalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+const protobackgroundColor = protopielabels.map((_, i) => protopalette[i % protopalette.length]);
+      
+       new Chart(document.getElementById("second-protocol-chart").getContext("2d"), {
+        type: "pie",
+        data: {
+          labels: protopielabels,
+          datasets: [
+            {
+              data: protopiedataMiB,
+              backgroundColor: protobackgroundColor,
+              borderColor: "#ffffff",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+
+// Second remote host pie chart
+      const topFiveRemote = secondhostEntries.slice(0, 5);
+     
+const hostpielabels = topFiveRemote.map(([appName, bytes]) => appName);
+const hostpiedataMiB = topFiveRemote.map(([appName, bytes]) =>
+  (bytes / (1024 * 1024)).toFixed(1)
+);
+
+// 3) Pick a simple color palette (one color per slice)
+const hostpalette = ["#06B6D4", "#6366F1", "#10B981", "#EC4899", "#F59E0B"];
+const hostbackgroundColor = hostpielabels.map((_, i) => hostpalette[i % hostpalette.length]);
+      
+       new Chart(document.getElementById("second-remotehost-chart").getContext("2d"), {
+        type: "pie",
+        data: {
+          labels: hostpielabels,
+          datasets: [
+            {
+              data: hostpiedataMiB,
+              backgroundColor: hostbackgroundColor,
+              borderColor: "#ffffff",
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+              align: "center",
+              labels: {
+                boxWidth: 12,
+                padding: 8,
+                color: "#374151"
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`
+              }
+            }
+          }
+        }
+      });
+
+// ––– Second-protocol table pagination –––
+
+// 1️⃣ Copy your data
+const allSecondProtocols = protoEntries.slice();
+
+// 2️⃣ State
+let secondProtocolCurrentPage = 1;
+let secondProtocolRowsPerPage  = parseInt(
+  document.getElementById("secondprotocolRowsPerPage").value,
+  10
+);
+
+// 3️⃣ Grab DOM elements
+const secondProtocolTbody       = document.querySelector("#secondprotocolTable tbody");
+const secondProtocolInfo        = document.getElementById("secondprotocol-info");
+const secondProtocolPagination  = document.getElementById("secondprotocol-pagination");
+
+// 4️⃣ Render the table rows
+function renderSecondProtocolTable() {
+  secondProtocolTbody.innerHTML = "";
+
+  const total    = allSecondProtocols.length;
+  const startIdx = (secondProtocolCurrentPage - 1) * secondProtocolRowsPerPage;
+  const endIdx   = Math.min(startIdx + secondProtocolRowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const [protocol, bytes] = allSecondProtocols[i];
+    const tr = document.createElement("tr");
+
+    // Column 1: Protocol string
+    const td1 = document.createElement("td");
+    td1.textContent = protocol;
+    td1.dataset.id = protocol;
+
+
+    tr.appendChild(td1);
+
+    // Column 2: Traffic → MiB
+    const td2 = document.createElement("td");
+    td2.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    secondProtocolTbody.appendChild(tr);
+  }
+
+  // Update “X – Y of Z”
+  secondProtocolInfo.textContent =
+    total === 0
+      ? "0 – 0 of 0"
+      : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+// 5️⃣ Render pagination controls
+function renderSecondProtocolPaginationControls() {
+  secondProtocolPagination.innerHTML = "";
+  const totalPages = Math.ceil(allSecondProtocols.length / secondProtocolRowsPerPage);
+
+  function btn(label, disabled, onClick) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // Prev
+  secondProtocolPagination.appendChild(
+    btn("Prev", secondProtocolCurrentPage === 1, () => {
+      secondProtocolCurrentPage--;
+      secondProtocolUpdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === secondProtocolCurrentPage;
+    const b = btn(p, isActive, () => {
+      secondProtocolCurrentPage = p;
+      secondProtocolUpdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    secondProtocolPagination.appendChild(b);
+  }
+
+  // Next
+  secondProtocolPagination.appendChild(
+    btn("Next", secondProtocolCurrentPage === totalPages || totalPages === 0, () => {
+      secondProtocolCurrentPage++;
+      secondProtocolUpdatePagination();
+    }))
+  ;
+}
+
+// 6️⃣ Combine render calls
+function secondProtocolUpdatePagination() {
+  renderSecondProtocolTable();
+  renderSecondProtocolPaginationControls();
+}
+
+// 7️⃣ Wire up rows-per-page selector
+document.getElementById("secondprotocolRowsPerPage")
+  .addEventListener("change", e => {
+    secondProtocolRowsPerPage  = parseInt(e.target.value, 10);
+    secondProtocolCurrentPage = 1;
+    secondProtocolUpdatePagination();
+  });
+
+// 8️⃣ Initial render
+secondProtocolUpdatePagination();
+
+// end of second protocol table pagination
+
+// ––– Second-remote-host table pagination –––
+
+// 1️⃣ Copy your data
+const allSecondRemoteHosts = secondhostEntries.slice();
+
+// 2️⃣ State
+let secondRemoteHostCurrentPage = 1;
+let secondRemoteHostRowsPerPage  = parseInt(
+  document.getElementById("secondremoteHostRowsPerPage").value,
+  10
+);
+
+// 3️⃣ Grab DOM elements
+const secondRemoteHostTbody = document.querySelector("#secondremotehostTable tbody");
+const secondRemoteHostInfo  = document.getElementById("secondremoteHost-info");
+const secondRemoteHostPag   = document.getElementById("secondremoteHost-pagination");
+
+// 4️⃣ Render the table rows
+function renderSecondRemoteHostTable() {
+  secondRemoteHostTbody.innerHTML = "";
+
+  const total    = allSecondRemoteHosts.length;
+  const startIdx = (secondRemoteHostCurrentPage - 1) * secondRemoteHostRowsPerPage;
+  const endIdx   = Math.min(startIdx + secondRemoteHostRowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const [host, bytes] = allSecondRemoteHosts[i];
+    const tr = document.createElement("tr");
+
+    // Column 1: Host
+    const td1 = document.createElement("td");
+    td1.textContent = host;
+    td1.dataset.id  = host;
+    tr.appendChild(td1);
+
+    // Column 2: Traffic → MiB
+    const td2 = document.createElement("td");
+    td2.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    secondRemoteHostTbody.appendChild(tr);
+  }
+
+  // Update “X – Y of Z”
+  secondRemoteHostInfo.textContent =
+    total === 0
+      ? "0 – 0 of 0"
+      : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+// 5️⃣ Render pagination controls
+function renderSecondRemoteHostControls() {
+  secondRemoteHostPag.innerHTML = "";
+  const totalPages = Math.ceil(allSecondRemoteHosts.length / secondRemoteHostRowsPerPage);
+
+  function btn(label, disabled, onClick) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // Prev
+  secondRemoteHostPag.appendChild(
+    btn("Prev", secondRemoteHostCurrentPage === 1, () => {
+      secondRemoteHostCurrentPage--;
+      secondRemoteHostUpdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === secondRemoteHostCurrentPage;
+    const b = btn(p, isActive, () => {
+      secondRemoteHostCurrentPage = p;
+      secondRemoteHostUpdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    secondRemoteHostPag.appendChild(b);
+  }
+
+  // Next
+  secondRemoteHostPag.appendChild(
+    btn("Next", secondRemoteHostCurrentPage === totalPages || totalPages === 0, () => {
+      secondRemoteHostCurrentPage++;
+      secondRemoteHostUpdatePagination();
+    }))
+  ;
+}
+
+// 6️⃣ Combine render calls
+function secondRemoteHostUpdatePagination() {
+  renderSecondRemoteHostTable();
+  renderSecondRemoteHostControls();
+}
+
+// 7️⃣ Wire up rows-per-page selector
+document.getElementById("secondremoteHostRowsPerPage")
+  .addEventListener("change", e => {
+    secondRemoteHostRowsPerPage   = parseInt(e.target.value, 10);
+    secondRemoteHostCurrentPage   = 1;
+    secondRemoteHostUpdatePagination();
+  });
+
+// 8️⃣ Initial render
+secondRemoteHostUpdatePagination()
+// end of second remote host table pagination
+
+// ––– Second-application table pagination –––
+
+// 1️⃣ Copy your data
+const allSecondApplications = secondapplicationEntries.slice();
+
+// 2️⃣ State
+let secondApplicationCurrentPage = 1;
+let secondApplicationRowsPerPage  = parseInt(
+  document.getElementById("secondapplicationRowsPerPage").value,
+  10
+);
+
+// 3️⃣ Grab DOM elements
+const secondApplicationTbody      = document.querySelector("#secondapplicationTable tbody");
+const secondApplicationInfoText   = document.getElementById("secondapplication-info");
+const secondApplicationPagination = document.getElementById("secondapplication-pagination");
+
+// 4️⃣ Render the table rows
+function renderSecondApplicationsTable() {
+  secondApplicationTbody.innerHTML = "";
+
+  const total    = allSecondApplications.length;
+  const startIdx = (secondApplicationCurrentPage - 1) * secondApplicationRowsPerPage;
+  const endIdx   = Math.min(startIdx + secondApplicationRowsPerPage, total);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const [application, bytes] = allSecondApplications[i];
+    const tr = document.createElement("tr");
+
+    // Column 1: Application name
+    const td1 = document.createElement("td");
+    td1.textContent = application;
+    td1.dataset.id  = application;
+    tr.appendChild(td1);
+
+    // Column 2: Traffic → MiB
+    const td2 = document.createElement("td");
+    td2.textContent = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    tr.appendChild(td2);
+
+    secondApplicationTbody.appendChild(tr);
+  }
+
+  // Update info: “X – Y of Z”
+  secondApplicationInfoText.textContent =
+    total === 0
+      ? "0 – 0 of 0"
+      : `${startIdx + 1} – ${endIdx} of ${total}`;
+}
+
+// 5️⃣ Render pagination controls
+function renderSecondApplicationsPaginationControls() {
+  secondApplicationPagination.innerHTML = "";
+  const totalPages = Math.ceil(allSecondApplications.length / secondApplicationRowsPerPage);
+
+  function btn(label, disabled, onClick) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.disabled   = disabled;
+    b.classList.add("page-btn");
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  // Prev
+  secondApplicationPagination.appendChild(
+    btn("Prev", secondApplicationCurrentPage === 1, () => {
+      secondApplicationCurrentPage--;
+      secondApplicationsUpdatePagination();
+    }))
+  ;
+
+  // Page numbers
+  for (let p = 1; p <= totalPages; p++) {
+    const isActive = p === secondApplicationCurrentPage;
+    const b = btn(p, isActive, () => {
+      secondApplicationCurrentPage = p;
+      secondApplicationsUpdatePagination();
+    });
+    if (isActive) b.classList.add("active-page");
+    secondApplicationPagination.appendChild(b);
+  }
+
+  // Next
+  secondApplicationPagination.appendChild(
+    btn("Next", secondApplicationCurrentPage === totalPages || totalPages === 0, () => {
+      secondApplicationCurrentPage++;
+      secondApplicationsUpdatePagination();
+    }))
+  ;
+}
+
+// 6️⃣ Combine render calls
+function secondApplicationsUpdatePagination() {
+  renderSecondApplicationsTable();
+  renderSecondApplicationsPaginationControls();
+}
+
+// 7️⃣ Wire up rows-per-page selector
+document.getElementById("secondapplicationRowsPerPage")
+  .addEventListener("change", e => {
+    secondApplicationRowsPerPage   = parseInt(e.target.value, 10);
+    secondApplicationCurrentPage   = 1;
+    secondApplicationsUpdatePagination();
+  });
+
+// 8️⃣ Initial render
+secondApplicationsUpdatePagination();
+// end of second application table pagination
+}
+
+
+   
+ const secondtableIds = [
+    "secondapplicationTable",
+    "secondlocalhostTable",
+    "secondremotehostTable",
+    "secondprotocolTable"
+  ];
+
+  secondtableIds.forEach(tblId => {
+    const table = document.getElementById(tblId);
+    if (!table) return;
+    table.querySelector("tbody").addEventListener("click", event => {
+      const td = event.target.closest("td");
+      if (!td) return;
+
+      // Only proceed if it’s the first column (Label)
+      const colIndex = Array.from(td.parentElement.children).indexOf(td);
+      if (colIndex !== 0) return;
+
+      const clickedLabel = td.textContent.trim();
+      if (!clickedLabel) return;
+       
+       const trafficValue = td.parentElement.querySelectorAll("td")[1].textContent.trim();    
+     
+ currentSubSection = clickedLabel;
+ console.log("currentSubSection", currentSubSection);
+    updateBreadcrumb("Traffic Overview", currentClientLabel, currentSubSection);
+
+    // ✅ Hide main detail and show side block
+    document.getElementById("secondpage").style.display = "none";
+
+    const sideBlock = document.getElementById("sideDataBlock");
+    const sideLabel = document.getElementById("sideDataLabel");
+    const sideValue = document.getElementById("sideDataValue");
+
+    sideBlock.style.display = "block";
+    sideLabel.textContent = clickedLabel;
+    sideValue.textContent = trafficValue;
+   
+
+    // ─── 2) Hide the entire second‐page container now ───
+
+
+    });
+  });
+
+
+});
+
+  
+   </script>
+
+    <!-- search or file table script -->
+    <script>
+    function filterTable() {
+      const input = document.getElementById('localhostsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#localhostTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+ 
+    function applicationfilterTable() {
+       const input = document.getElementById('applicationsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#applicationTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+   
+ 
+    function secondLocalhostfilterTable() {
+       const input = document.getElementById('secondremotehostsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#secondlocalhostTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+   
+ 
+    function secondprotocolfilterTable() {
+       const input = document.getElementById('secondprotocolsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#secondprotocolTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+   
+
+    function secondapplicationfilterTable() {
+       const input = document.getElementById('secondapplicationsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#secondapplicationTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+   
+
+    function secondremotehostfilterTable() {
+       const input = document.getElementById('secondremotehostsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#secondremotehostTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+   
+
+    function remotehostfilterTable() {
+       const input = document.getElementById('remotehostsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#remotehostTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+  
+    function protocolfilterTable() {
+       const input = document.getElementById('protocolsearchInput').value.toLowerCase();
+      const rows = document
+        .querySelectorAll('#protocolTable tbody tr');
+
+      rows.forEach(row => {
+        const label = row
+          .querySelector('td')
+          .textContent
+          .toLowerCase();
+
+        // show row if it matches, hide otherwise
+        row.style.display = label.includes(input) ? '' : 'none';
+      });
+    }
+ 
+ </script>
+
+  
+
+</body>
+</html>

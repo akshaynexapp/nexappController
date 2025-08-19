@@ -10,6 +10,9 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import last_modified
 from swapper import load_model
 
+from django.urls import reverse
+from django.views.generic import TemplateView
+
 from .settings import BACKENDS, VPN_BACKENDS
 from .utils import get_object_or_404
 
@@ -190,3 +193,6 @@ def get_default_values(request):
     if group_pk:
         _update_default_values(DeviceGroup, group_where, default_values)
     return JsonResponse({'default_values': default_values})
+
+
+

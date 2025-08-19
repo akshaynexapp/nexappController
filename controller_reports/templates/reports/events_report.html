@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<!-- <h1>Device Events & Alarms</h1> -->
+<div class="section">
+  <h2>Open Incidents</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Severity</th><th>Event Type</th><th>Device</th><th>Site</th><th>First Seen</th><th>Last Seen</th><th>Occurrences</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in open_incidents %}
+      <tr>
+        <td>{{ e.severity }}</td><td>{{ e.event_type }}</td><td>{{ e.device_name }}</td><td>{{ e.site_name }}</td>
+        <td>{{ e.first_seen }}</td><td>{{ e.last_seen }}</td><td>{{ e.occurrences }}</td><td>{{ e.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="section"><h2>Timeline</h2><div class="chart">[Timeline Chart Placeholder]</div></div>
+<div class="note">MTTA/MTTR computed over resolved incidents in range.</div>
+{% endblock %}
+

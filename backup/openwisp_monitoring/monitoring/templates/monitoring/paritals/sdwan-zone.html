@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tab Navigation</title>
+    <style>
+      /* Container */
+      #nav {
+        display: flex;
+        border-bottom: 1px solid #e2e8f0;
+        font-family: Inter, sans-serif;
+      }
+      /* Each tab */
+      #nav a {
+        padding: 12px 0;
+        margin-right: 32px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        color: #475467;
+        border-bottom: 2px solid transparent;
+        transition: color 0.2s ease;
+      }
+      /* Hover & active */
+      #nav a:hover,
+      #nav a.active {
+        color: #2563eb;
+      }
+      #nav a.active {
+        border-bottom-color: #2563eb;
+      }
+
+      /* Tab‐panes */
+      #tab-content .tab-pane {
+        display: none;
+      }
+      #tab-content .tab-pane.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <nav id="nav">
+      <a href="#" data-target="sdwanzone" class="active">SDWAN Zone</a>
+      <a href="#" data-target="sdwanrule">SDWAN Rule</a>
+      <a href="#" data-target="sdwanparameter">Parameters </a>
+    </nav>
+
+    <div id="tab-content">
+      <div id="sdwanzone" class="tab-pane active">
+        {% include "monitoring/paritals/zone.html" %}
+      </div>
+      <div id="sdwanrule" class="tab-pane">
+        {% include "monitoring/paritals/rule.html" %}
+      </div>
+      <div id="sdwanparameter" class="tab-pane">
+        {% include "monitoring/paritals/parameters.html" %}
+      </div>
+      
+    </div>
+
+    <!-- <script>
+      document.querySelectorAll("#nav a").forEach((link) => {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          // activate tab button
+          document.querySelector("#nav a.active").classList.remove("active");
+          this.classList.add("active");
+          // show corresponding pane
+          const prev = document.querySelector("#tab-content .tab-pane.active");
+          prev && prev.classList.remove("active");
+          document.getElementById(this.dataset.target).classList.add("active");
+        });
+      });
+    </script> -->
+
+
+    <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // kick off the tabs by “clicking” the first link
+    document.querySelectorAll("#nav a").forEach(link => {
+  link.addEventListener("click", function(e) {
+    e.preventDefault();
+
+    // 1) Remove active class from all nav links
+    document.querySelectorAll("#nav a.active")
+            .forEach(el => el.classList.remove("active"));
+    this.classList.add("active");
+
+    // 2) Remove active class from all panes
+    document.querySelectorAll("#tab-content .tab-pane.active")
+            .forEach(el => el.classList.remove("active"));
+    // 3) Show the one you clicked
+    document.getElementById(this.dataset.target)
+            .classList.add("active");
+  });
+});
+  });
+</script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>Network Performance</h1>
+{% include "reports/_kpi.html" %}
+<div class="section">
+  <h2>Composite SLI by Site</h2>
+  <table>
+    <thead><tr><th>Site</th><th>SLI %</th><th>Latency</th><th>Loss</th><th>Availability</th></tr></thead>
+    <tbody>
+      {% for n in perf %}
+      <tr><td>{{ n.site_name }}</td><td>{{ n.sli_pct }}</td><td>{{ n.latency_ms }}</td><td>{{ n.loss_pct }}</td><td>{{ n.availability_pct }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

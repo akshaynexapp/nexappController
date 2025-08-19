@@ -10,7 +10,16 @@ from openwisp_users.api.mixins import ProtectedAPIMixin
 from ...settings import CACHE_TIMEOUT
 from ...views import MonitoringApiViewMixin
 from ..configuration import DEFAULT_DASHBOARD_TRAFFIC_CHART
-
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils.dateparse import parse_datetime
+from openwisp_monitoring.device.api.serializers import DPIRecordSerializer
+from rest_framework import viewsets, status, generics
+from django.db.models import Sum
+from django.http import JsonResponse
+import json
+import requests
+from django.views.decorators.csrf import csrf_exempt
 Chart = load_model('monitoring', 'Chart')
 Metric = load_model('monitoring', 'Metric')
 Organization = load_model('nexapp_users', 'Organization')
@@ -191,3 +200,32 @@ class DashboardTimeseriesView(ProtectedAPIMixin, MonitoringApiViewMixin, APIView
 
 
 dashboard_timeseries = DashboardTimeseriesView.as_view()
+
+@csrf_exempt
+def device_sla_proxy(request):
+    """
+    Expects POST { "last_ip": "114.29.234.44" }.
+    Forwards the get-config request to https://<last_ip>/api-new/performance_sla,
+    ignoring certificate errors, and returns the JSON.
+    """
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+        last_ip = body["last_ip"]
+        method  = body.get("method",  "get-config")
+        payload = body.get("payload", {})
+    except (ValueError, KeyError):
+        return JsonResponse({"error": "must POST JSON with last_ip"}, status=400)
+
+    try:
+        resp = requests.post(
+            f"https://{last_ip}/api-new/performance_sla",
+            json={"method": method, "payload": payload},
+            verify=False,   # ignore self-signed cert
+            timeout=10
+        )
+        resp.raise_for_status()
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=502)
+
+    return JsonResponse(resp.json(), status=resp.status_code)
+ 

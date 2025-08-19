@@ -4,12 +4,21 @@ from django_loci.base.models import (
     AbstractLocation,
     AbstractObjectLocation,
 )
+from django.db import models
 from swapper import get_model_name
 
 from openwisp_users.mixins import OrgMixin, ValidateOrgMixin
 
 
 class BaseLocation(OrgMixin, AbstractLocation):
+    city = models.CharField(
+        'City', max_length=100, blank=True, null=True,
+        help_text='Optional city name'
+    )
+    state = models.CharField(
+        'State', max_length=100, blank=True, null=True,
+        help_text='Optional state or region'
+    )
     class Meta(AbstractLocation.Meta):
         abstract = True
 

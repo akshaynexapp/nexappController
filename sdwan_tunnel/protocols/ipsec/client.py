@@ -4,6 +4,8 @@ import requests
 CONTROLLER_API_URL = "https://3.6.121.36/api/v1/controller/device/"
 ONLINE_API_URL     = "https://3.6.121.36/api/v1/monitoring/device/"
 TOKEN_API_URL      = "https://3.6.121.36/api/v1/users/token/"
+TUNNEL_STATUS = "https://3.6.121.36/api/v1/monitoring/device/{uuid}/ipsectunnel_list/"
+
 USERNAME           = "admin"
 PASSWORD           = "Nexapp@123"
  
@@ -24,7 +26,7 @@ def fetch_online_devices_by_names(device_names):
     print(f"[DEBUG] Requesting devices for names: {device_names}")
     token = get_bearer_token()
     if not token:
-       token = '80ee082483ee2a41d520909e571a3970f06d5907'
+       token = '709a479602b572990248897cdf754a8dbc8411d5'
         
 
     headers = {
@@ -51,6 +53,7 @@ def fetch_online_devices_by_names(device_names):
         for dev in filtered_devices:
             name = dev.get("name")
             status = dev.get("monitoring", {}).get("status")
+            # uuid = dev.get("id")
             print(f"Device '{name}' monitoring status: '{status}'")
 
         return filtered_devices
@@ -63,7 +66,7 @@ def fetch_management_ips_by_names(device_names):
     print(f"[DEBUG] Requesting management IPs for device names: {device_names}")
     token = get_bearer_token()
     if not token:
-        token = '80ee082483ee2a41d520909e571a3970f06d5907'
+        token = '709a479602b572990248897cdf754a8dbc8411d5'
  
     headers = {
         "Authorization": f"Bearer {token}",
@@ -79,13 +82,21 @@ def fetch_management_ips_by_names(device_names):
  
         filtered_devices = [d for d in all_devices if d.get("name")  in device_names]
         print(f"[DEBUG] Filtered to {len(filtered_devices)} matched device(s)")
+        
         for dev in filtered_devices:
-            print(f"[DEBUG] Matched Name: {dev['name']} | Management IP: {dev.get('management_ip')}")
- 
+            print(f"[DEBUG] {dev['name']}: management_ip={dev.get('management_ip')} last_ip={dev.get('last_ip')}")
+
         return {
-            d["name"]: d.get("management_ip")
+            d["name"]: {
+                "management_ip": d.get("management_ip"),
+                "last_ip":       d.get("last_ip"),
+                "id":       d.get("id")
+            }
             for d in filtered_devices
         }
+    
+
+
     except Exception as e:
         print(f"[API ERROR] Failed to fetch IPs: {e}")
         return {}
@@ -143,3 +154,35 @@ def push_ipsec_config_by_mgmt_ip(mgmt_ip, config_data):
     except Exception as e:
         print(f"[API ERROR] Failed to push IPSec config to {mgmt_ip}: {e}")
         return {"status": "error", "message": str(e)}
+    
+
+
+
+def fetch_last_ip_by_device_id(device_id):
+    """
+    Fetches all devices from CONTROLLER_API_URL and returns the last_ip
+    of the one whose 'id' == device_id, or None if not found.
+    """
+    token = get_bearer_token() or "709a479602b572990248897cdf754a8dbc8411d5"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        resp = requests.get(CONTROLLER_API_URL, headers=headers, verify=False, timeout=15)
+        resp.raise_for_status()
+        devices = resp.json().get("results", [])
+
+        # find the matching device
+        dev = next((d for d in devices if d.get("id") == device_id), None)
+        if not dev:
+            print(f"[DEBUG] No device found with id={device_id}")
+            return None
+
+        print(f"[DEBUG] Found device {device_id}: last_ip={dev.get('last_ip')}")
+        return dev.get("last_ip")
+
+    except Exception as e:
+        print(f"[API ERROR] Failed to fetch device list: {e}")
+        return None

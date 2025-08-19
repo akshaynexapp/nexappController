@@ -1,7 +1,7 @@
 import logging
 import uuid
-from datetime import datetime
-
+from datetime import datetime , timedelta
+from django.utils import timezone
 from cache_memoize import cache_memoize
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.gis.db.models.functions import Distance
@@ -43,6 +43,30 @@ from .filters import (
     MonitoringNearbyDeviceFilter,
     WifiSessionFilter,
 )
+from openwisp_monitoring.device.models import DPIRecord
+from openwisp_monitoring.device.models import TSIPReport
+from openwisp_monitoring.device.models import ClientSummary
+from openwisp_monitoring.device.models import RealTraffic
+from openwisp_monitoring.device.models import InerfaceEvents
+from openwisp_monitoring.device.models import InterfaceTraffic
+from openwisp_monitoring.device.models import InterfaceList
+from openwisp_monitoring.device.models import LatquaList
+from openwisp_monitoring.device.models import WanStatus
+from openwisp_monitoring.device.models import IpsecTunnels
+from openwisp_monitoring.device.models import ConfigPush
+from openwisp_monitoring.device.models import SpokeStatus
+from .serializers import ClientreportSerializer
+from .serializers import DPIRecordSerializer
+from .serializers import RealTrafficSerializer
+from .serializers import TSIPreportSerializer
+from .serializers import InerfaceEventsSerializer
+from .serializers import InterfaceListSerializer
+from .serializers import InterfaceTrafficSerializer
+from .serializers import LatquaListSerializer
+from .serializers import WanStatusSerializer
+from .serializers import IpsecTunnelsSerializer
+from .serializers import ConfigPushSerializer
+from .serializers import SpokeStatusSerializer
 from .serializers import (
     MonitoringDeviceDetailSerializer,
     MonitoringDeviceListSerializer,
@@ -51,6 +75,7 @@ from .serializers import (
     MonitoringNearbyDeviceSerializer,
     WifiSessionSerializer,
 )
+from django.utils.dateparse import parse_datetime
 
 logger = logging.getLogger(__name__)
 Chart = load_model('monitoring', 'Chart')
@@ -142,7 +167,179 @@ class DeviceMetricView(
         cls._get_charts.invalidate(None, None, pk)
 
     def get(self, request, pk):
-        # ensure valid UUID
+      
+
+# DPI aggregation block
+        if request.path.endswith('/dpi_summary_v2/'):
+            try:
+                rec = DPIRecord.objects.filter(device_id=pk).latest('created')
+            except DPIRecord.DoesNotExist:
+                logger.info(f'No DPIRecord found for device {pk}')
+                rec = None
+         
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+
+        # —— end DPI aggregation block ——
+#InerfaceEvents block
+        if request.path.endswith('/interface_event/'):
+            try:
+                rec = InerfaceEvents.objects.filter(device_id=pk).latest('created')
+            except InerfaceEvents.DoesNotExist:
+                logger.info(f'No DPIRecord found for device {pk}')
+                rec = None
+         
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+
+        # —— end InerfaceEvents block ——
+#InterfaceTraffic block
+        if request.path.endswith('/interface_traffic/'):
+            try:
+                rec = InterfaceTraffic.objects.filter(device_id=pk).latest('created')
+            except InterfaceTraffic.DoesNotExist:
+                logger.info(f'No DPIRecord found for device {pk}')
+                rec = None
+
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+
+        # —— end InterfaceTraffic block ——
+#InterfaceTraffic block
+        if request.path.endswith('/interface_list/'):
+            try:
+                rec = InterfaceList.objects.filter(device_id=pk).latest('created')
+            except InterfaceList.DoesNotExist:
+                logger.info(f'No DPIRecord found for device {pk}')
+                rec = None
+         
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+
+        # —— end InterfaceTraffic block ——
+
+        if request.path.endswith('/lat_qua_report/'):
+            try:
+                rec = LatquaList.objects.filter(device_id=pk).latest('created')
+            except LatquaList.DoesNotExist:
+                rec = None
+
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+            return Response({'latest_raw': rec.raw}, status=200)
+
+# dpi_client_summary aggregation block
+        if request.path.endswith('/dpi_client_summary/'):
+            try:
+                rec = ClientSummary.objects.filter(device_id=pk).latest('created')
+            except ClientSummary.DoesNotExist:
+                logger.info(f'No ClientSummary found for device {pk}')
+                rec = None
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+
+        # —— end dpi_client_summary aggregation block ——
+
+        # —— Real Traffic aggregation block ——
+        if request.path.endswith('/real_traffic/'):
+            try:
+                rec = RealTraffic.objects.filter(device_id=pk).latest('created')
+            except RealTraffic.DoesNotExist:
+                logger.info(f'No RealTraffic found for device {pk}')
+                rec = None
+         
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        
+
+        # —— TSIP Report aggregation block ——
+        if request.path.endswith('/tsipreport/'):
+            try:
+                rec = TSIPReport.objects.filter(device_id=pk).latest('created')
+            except TSIPReport.DoesNotExist:
+                logger.info(f'No TSIP Report found for device {pk}')
+                rec = None
+  
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        # —— end TSIP Report block ——
+
+        # —— WAN Status aggregation block ——
+        if request.path.endswith('/wan_status/'):
+            try:
+                rec = WanStatus.objects.filter(device_id=pk).latest('created')
+            except WanStatus.DoesNotExist:
+                logger.info(f'No TSIP Report found for device {pk}')
+                rec = None
+  
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        # —— end WanStatus  block ——
+
+        # —— ipsectunnel_list block ——
+        if request.path.endswith('/ipsectunnel_list/'):
+            try:
+                rec = IpsecTunnels.objects.filter(device_id=pk).latest('created')
+            except IpsecTunnels.DoesNotExist:
+                logger.info(f'No IpsecTunnels found for device {pk}')
+                rec = None
+  
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        # —— end IpsecTunnels block ——
+
+        # —— configpush block ——
+        if request.path.endswith('/configpush/'):
+            try:
+                rec = ConfigPush.objects.filter(device_id=pk).latest('created')
+            except ConfigPush.DoesNotExist:
+                logger.info(f'No ConfigPush found for device {pk}')
+                rec = None
+  
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        # —— end ConfigPush block ——
+
+
+
+        # —— timeseries aggregation block ——
+        if request.path.endswith('/timeseries/'):
+            try:
+                rec = SpokeStatus.objects.filter(device_id=pk).latest('created')
+            except SpokeStatus.DoesNotExist:
+                logger.info(f'No SpokeStatus found for device {pk}')
+                rec = None
+         
+            if rec is None:
+                return Response({'latest_raw': None}, status=200)
+
+            return Response({'latest_raw': rec.raw}, status=200)
+        
+
+
+
+        # fall back to the normal device‐metrics GET
+       
         try:
             pk = str(uuid.UUID(pk))
         except ValueError:
@@ -156,6 +353,7 @@ class DeviceMetricView(
                 {**device_metrics_data, **charts_data}, status=status.HTTP_200_OK
             )
         return response
+
 
     @cache_memoize(CACHE_TIMEOUT, args_rewrite=get_charts_args_rewrite)
     def _get_charts(self, request, *args, **kwargs):
@@ -175,6 +373,218 @@ class DeviceMetricView(
 
     def post(self, request, pk):
         self.instance = self.get_object(pk)
+        
+        # —— DPI ingestion block ——
+        if request.path.endswith('/dpi_summary_v2/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = DPIRecordSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end DPI block ——
+        # —— InerfaceEventsSerializer block ——
+        if request.path.endswith('/interface_event/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = InerfaceEventsSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end InerfaceEventsSerializer——
+        # —— InterfaceListSerializer block ——
+        if request.path.endswith('/interface_list/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = InterfaceListSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end InterfaceListSerializer
+        # —— InterfaceTrafficSerializer block ——
+        if request.path.endswith('/interface_traffic/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = InterfaceTrafficSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end InterfaceTrafficSerializer
+        # —— DPI ingestion block ——
+        if request.path.endswith('/dpi_client_summary/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = ClientreportSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end DPI block ——
+        # —— real_traffic ingestion block ——
+        if request.path.endswith('/real_traffic/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = RealTrafficSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end real_traffic block ——
+        # —— TSIP Report ——
+        if request.path.endswith('/tsipreport/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = TSIPreportSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end TSIP Report block ——
+
+  # —— LatquaListSerializer block ——
+        if request.path.endswith('/lat_qua_report/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = LatquaListSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end LatquaListSerializer
+  # —— WanStatus block ——
+        if request.path.endswith('/wan_status/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = WanStatusSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end WanStatus
+  # —— ipsectunnel_list block ——
+        if request.path.endswith('/ipsectunnel_list/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = IpsecTunnelsSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end WanStatus
+
+
+  # —— timeseries block ——
+        if request.path.endswith('/timeseries/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = SpokeStatusSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end WanStatus
+      
+
+  # —— configpush block ——
+        if request.path.endswith('/configpush/'):
+            payload = request.data
+            ts = request.query_params.get('time')
+            timestamp = parse_datetime(ts) if ts else None
+            if timestamp is None:
+                timestamp = timezone.now()
+            serializer = ConfigPushSerializer(data={
+                'timestamp': timestamp,
+                'raw':       payload,
+            })
+            serializer.is_valid(raise_exception=True)
+         
+            serializer.save(device=self.instance)
+         
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+       # —— end configpush block ——
+
+
         if self.instance._is_deactivated:
             # If the device is deactivated, do not accept data.
             # We don't use "Device.is_deactivated()" to avoid
@@ -209,7 +619,8 @@ class DeviceMetricView(
             current=current,
         )
         return Response(None)
-
+    
+    
 
 device_metric = DeviceMetricView.as_view()
 
@@ -336,3 +747,5 @@ class WifiSessionDetailView(
 
 
 wifi_session_detail = WifiSessionDetailView.as_view()
+
+

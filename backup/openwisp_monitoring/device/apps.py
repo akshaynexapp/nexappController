@@ -3,9 +3,13 @@ from urllib.parse import urljoin
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.db.models import Sum
+
 from django.db.models.signals import post_delete, post_save
 from django.urls import reverse_lazy
+from openwisp_utils.admin_theme import register_dashboard_chart
+
 from django.utils.translation import gettext_lazy as _
 from swapper import get_model_name, load_model
 
@@ -83,7 +87,7 @@ class DeviceMonitoringConfig(AppConfig):
         DeviceLocation = load_model('geo', 'DeviceLocation')
         Metric = load_model('monitoring', 'Metric')
         Chart = load_model('monitoring', 'Chart')
-        Organization = load_model('nexapp_users', 'Organization')
+        Organization = load_model('openwisp_users', 'Organization')
 
         post_save.connect(
             self.device_post_save_receiver,
@@ -366,6 +370,47 @@ class DeviceMonitoringConfig(AppConfig):
                     'deactivated': app_settings.HEALTH_STATUS_LABELS['deactivated'],
                 },
             },
+        )
+        register_dashboard_chart(
+            position=17,  # choose an unused slot
+            config={
+                'name': _('WAN Status'),           # top-level chart title
+                'query_params': {
+                    'app_label': 'device_monitoring',  # <-- use this label
+                    'model': 'WanInterfaceStatus',
+                    'group_by': 'up',         # JSONField lookup
+                    'organization_field': 'device__organization_id',
+                },
+                'colors': {
+                    'True':  '#28a745',
+                    'False': '#dc3545',
+                },
+                'labels': {
+                    'True':  _('Up'),
+                    'False': _('Down'),
+                },
+            }
+        )
+        register_dashboard_chart(
+            position=19,  # next free slot
+            config={
+                'name': _('Top Applications Traffic'),
+                'query_params': {
+                    'app_label': 'device_monitoring',      # replace with your actual app label
+                    'model': 'RealTraffic',
+                    'group_by': 'raw__talkers__top_apps__0__name',
+                    'organization_field': 'device__organization_id',
+                    
+                },
+                'colors': {
+                    '0.netify.unclassified': '#17a2b8',
+                    '10792.netify.cisco-umbrella': '#ffc107',
+                },
+                'labels': {
+                    '0.netify.unclassified': _('Unclassified'),
+                    '10792.netify.cisco-umbrella': _('Cisco Umbrella'),
+                },
+            }
         )
 
         if app_settings.DASHBOARD_MAP:

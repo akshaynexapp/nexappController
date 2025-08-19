@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+      #blocked_threats_total,
+      #blocked_Ip_total {
+        color: rgb(67 56 202);
+        font-weight: 500;
+        font-size: 1.5rem;
+        line-height: 2rem;
+      }
+      .cards-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .card {
+        flex: 1 1 45% !important;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #111827;
+      }
+      .chart-wrapper {
+        position: relative;
+        height: 200px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- wan Table  -->
+    <div class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>WANs</h3>
+
+        <table id="wanTable">
+          <thead>
+            <tr>
+              <th>Interface</th>
+              <th>Device</th>
+              <th>Status</th>
+              <th>Public IP address</th>
+              <th>QoS</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <br />
+    <br />
+    <!-- wan events and traffic -->
+
+    <div id="wantrafficchartid" class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>WAN events</h3>
+        <div class="chart-wrapper">
+          <!-- <canvas id="ipPieChart"></canvas> -->
+        </div>
+      </div>
+    </div>
+    <div id="latencytrafficchartid">
+      <div class="cards-container">
+        <!-- Local Hosts Card -->
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/interface_list/`;
+
+        // 1) Create controller + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((response) => {
+            clearTimeout(timeoutId); // <— stop the timer on any resolution
+            if (!response.ok) {
+              throw new Error(
+                `API error ${response.status}: ${response.statusText}`
+              );
+            }
+            return response.json();
+          })
+          .then((json) => {
+            const { rules } = json.latest_raw.qos;
+            const wan_status = json.latest_raw.wan_status;
+            const { public_ip_addresses } = json.latest_raw.public_ip_report;
+            populateWanTable(rules, public_ip_addresses, wan_status);
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            if (err.name === "AbortError") {
+              console.error("Fetch aborted (timeout)");
+            } else {
+              console.error("Fetch failed:", err);
+            }
+          });
+      });
+
+      /**
+       * Populate the WAN table with one row per QoS rule.
+       * @param {Array} rules
+       *   Each rule has { interface, device, disabled, upload, download }
+       * @param {Array} ips
+       *   Array of public IP strings (e.g. ["27.57.245.226"])
+       */
+      function populateWanTable(rules, ips, status) {
+        const tbody = document.querySelector("#wanTable tbody");
+        tbody.innerHTML = ""; // clear any existing rows
+
+        // Join all public IPs with commas (if there are multiple)
+        const ipsText = ips && ips.length ? ips.join(", ") : "—";
+
+        rules.forEach((rule) => {
+          const tr = document.createElement("tr");
+
+          // 1) Interface
+          const tdInterface = document.createElement("td");
+          tdInterface.textContent = rule.interface;
+          tr.appendChild(tdInterface);
+
+          // 2) Device
+          const tdDevice = document.createElement("td");
+          tdDevice.textContent = rule.device;
+          tr.appendChild(tdDevice);
+
+          // // 3) Status (Enabled if disabled === false)
+          // const tdStatus = document.createElement("td");
+          // tdStatus.textContent = rule.disabled ? "Disabled" : "Enabled";
+          // tr.appendChild(tdStatus);
+
+          const tdStatus = document.createElement("td");
+          const deviceStatus = status.find((s) => s.device === rule.device);
+          tdStatus.textContent =
+            deviceStatus && deviceStatus.up ? "Online" : "Offline";
+          tr.appendChild(tdStatus);
+
+          // 4) Public IP address
+          const tdIP = document.createElement("td");
+          tdIP.textContent = ipsText;
+          tr.appendChild(tdIP);
+
+          // 5) QoS (format: “Up: X Mbps / Down: Y Mbps”)
+          const tdQos = document.createElement("td");
+          if (rule.disabled) {
+            tdQos.textContent = "Disabled";
+          } else {
+            tdQos.textContent = `Up: ${rule.upload} Mbps / Down: ${rule.download} Mbps`;
+          }
+          tr.appendChild(tdQos);
+          tbody.appendChild(tr);
+        });
+      }
+    </script>
+
+    <script>
+      // We’ll hold a reference to the Chart.js instance here so we can update it later.
+      const trafficCharts = {};
+      /**
+       * Called once on page load, and then every 60 seconds via setInterval.
+       * Fetches /interface_traffic/, transforms the data, and either
+       * initializes or updates the Chart.
+       */
+      function fetchAndRenderWanTraffic() {
+        // 1) Extract the device ID from the URL
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL for WAN traffic chart");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/interface_traffic/`;
+
+        // 2) Create AbortController + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((res) => {
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+              throw new Error(`API error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then((json) => {
+            const raw = json.latest_raw;
+            // Loop over every interface key (eth1, eth2, etc.)
+            Object.keys(raw).forEach((ifaceKey) => {
+              const result = raw[ifaceKey].result;
+              const rawLabels = result.labels; // [ epoch1, epoch2, … ] (newest→oldest)
+              const rawData = result.data; // [ [dl,ul], [dl,ul], … ]
+
+              // 3.a) Reverse + down-sample (every 3rd point = 1 min)
+              const reversedLabels = rawLabels.slice().reverse();
+              const reversedData = rawData.slice().reverse();
+              const filteredLabels = reversedLabels.filter(
+                (_, idx) => idx % 3 === 0
+              );
+              const filteredData = reversedData.filter(
+                (_, idx) => idx % 3 === 0
+              );
+
+              // 3.b) Convert each filtered epoch to “HH:mm”
+              const labelsChrono = filteredLabels.map((epochSec) => {
+                const d = new Date(epochSec * 1000);
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                return `${hh}:${mm}`;
+              });
+
+              // 3.c) Build download & upload numeric arrays
+              const downloadSeries = filteredData.map((pair) => pair[0]);
+              const uploadSeries = filteredData.map((pair) => pair[1]);
+
+              // 4) If no chart exists for this interface yet, create one; otherwise, update it
+              const canvasId = `trafficChart_${ifaceKey}`;
+              if (!trafficCharts[ifaceKey]) {
+                // 4.a) Create a new <canvas> inside #trafficChartsContainer
+
+                const card = document.createElement("div");
+                card.classList.add("card");
+                const heading = document.createElement("h3");
+                heading.textContent = "wan traffic";
+                card.appendChild(heading);
+
+                const wrapper = document.createElement("div");
+                wrapper.classList.add("chart-wrapper");
+
+                const canvas = document.createElement("canvas");
+                canvas.id = canvasId;
+                // (Optionally: canvas.style.height = "200px"; canvas.style.width = "100%"; )
+                wrapper.appendChild(canvas);
+
+                card.appendChild(wrapper);
+                const topContainer =
+                  document.getElementById("wantrafficchartid");
+                topContainer.appendChild(card);
+
+                // 4.b) Initialize a new Chart instance and store it
+                const ctx = canvas.getContext("2d");
+                trafficCharts[ifaceKey] = new Chart(ctx, {
+                  type: "line",
+                  data: {
+                    labels: labelsChrono,
+                    datasets: [
+                      {
+                        label: `${ifaceKey} Download`,
+                        data: downloadSeries,
+                        borderColor: "#0C8EDE",
+                        backgroundColor: "rgba(12, 142, 222, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                      {
+                        label: `${ifaceKey} Upload`,
+                        data: uploadSeries,
+                        borderColor: "#7D3CFA",
+                        backgroundColor: "rgba(125, 60, 250, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                    ],
+                  },
+                  options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        display: true,
+                        grid: {
+                          display: true,
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                        ticks: {
+                          callback: function (val, index) {
+                            return index % 3 === 0
+                              ? this.getLabelForValue(val)
+                              : "";
+                          },
+                          maxRotation: 45,
+                          minRotation: 45,
+                          autoSkip: false,
+                          color: "#333",
+                        },
+                      },
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function (value) {
+                            if (value < 1) return "0 kbps";
+                            return `${value} Mbps`;
+                          },
+                          color: "#333",
+                        },
+                        grid: {
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                      },
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          usePointStyle: false,
+                          boxWidth: 12,
+                        },
+                      },
+                      tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                          label: function (context) {
+                            const lab = context.dataset.label || "";
+                            const val = context.parsed.y;
+                            return val < 1
+                              ? `${lab}: 0 kbps`
+                              : `${lab}: ${val} Mbps`;
+                          },
+                        },
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                      mode: "index",
+                    },
+                  },
+                });
+              } else {
+                // 4.d) Update the existing chart’s data & labels
+                const chart = trafficCharts[ifaceKey];
+                chart.data.labels = labelsChrono;
+                chart.data.datasets[0].data = downloadSeries;
+                chart.data.datasets[1].data = uploadSeries;
+                chart.update();
+              }
+            });
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            if (err.name === "AbortError") {
+              console.error("WAN traffic fetch aborted (timeout)");
+            } else {
+              console.error("Failed to load WAN traffic data:", err);
+            }
+          });
+      }
+      /**
+       * Initializes a new Chart.js line chart inside #wanTrafficChart.
+       * @param {string[]} labels - array of “HH:mm” strings (chronological order)
+       * @param {number[]} dl - parallel array of download‐Mbps values
+       * @param {number[]} ul - parallel array of upload‐Mbps values
+       */
+      function initWanTrafficChart(labels, dl, ul) {
+        const ctx = document.getElementById("wanTrafficChart").getContext("2d");
+
+        wanTrafficChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Download",
+                data: dl,
+                borderColor: "#0C8EDE",
+                backgroundColor: "rgba(12, 142, 222, 0.2)",
+                borderWidth: 1,
+                pointRadius: 0,
+                tension: 0.3,
+              },
+              {
+                label: "Upload",
+                data: ul,
+                borderColor: "#7D3CFA",
+                backgroundColor: "rgba(125, 60, 250, 0.2)",
+                borderWidth: 1,
+                pointRadius: 0,
+                tension: 0.3,
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                display: true,
+                grid: {
+                  display: true, // ← turn ON vertical grid lines
+                  color: "#e0e0e0", // optional: control grid line color
+                  borderDash: [4, 4],
+                },
+                ticks: {
+                  // Only show one tick every 3 minutes. Since your raw data is in 20s increments,
+                  // that means every 3 minutes = 180 seconds = 9 indices.
+                  // The callback’s “index” parameter lets us show a label only if (index % 9 === 0).
+                  callback: function (val, index) {
+                    return index % 3 === 0 ? this.getLabelForValue(val) : "";
+                  },
+                  maxRotation: 45,
+                  minRotation: 45,
+                  autoSkip: false, // we’re manually skipping above
+                  color: "#333",
+                },
+              },
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  // Show “0 kbps” for <1, else “X Mbps”
+                  callback: function (value) {
+                    if (value < 1) {
+                      return "0 kbps";
+                    }
+                    return `${value} Mbps`;
+                  },
+                  color: "#333",
+                },
+                grid: {
+                  color: "#e0e0e0",
+                  borderDash: [4, 4],
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                labels: {
+                  usePointStyle: false, // ← or delete this line altogether
+                  boxWidth: 12,
+                },
+              },
+              tooltip: {
+                mode: "index",
+                intersect: false,
+                callbacks: {
+                  label: function (context) {
+                    const label = context.dataset.label || "";
+                    const val = context.parsed.y;
+                    if (val < 1) {
+                      return `${label}: 0 kbps`;
+                    }
+                    return `${label}: ${val} Mbps`;
+                  },
+                },
+              },
+            },
+            interaction: {
+              intersect: false,
+              mode: "index",
+            },
+          },
+        });
+      }
+
+      /**
+       * Updates the existing Chart instance with brand-new labels & data.
+       */
+      function updateWanTrafficChart(labels, dl, ul) {
+        wanTrafficChart.data.labels = labels;
+        wanTrafficChart.data.datasets[0].data = dl; // Download series
+        wanTrafficChart.data.datasets[1].data = ul; // Upload series
+        wanTrafficChart.update();
+      }
+
+      // 4) On page load, fetch once immediately, then re‐fetch every 60 s
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchAndRenderWanTraffic();
+        setInterval(fetchAndRenderWanTraffic, 60 * 1000); // every 1 minute
+      });
+    </script>
+
+    <!-- <script>
+      // Store Chart.js instances by “target key” (e.g. "8.8.8.8")
+      const latencyCharts = {};
+
+      function fetchAndRenderLatencyTraffic() {
+        // 1) Extract device PK from URL (e.g. "/device/abc123/")
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL for latency chart");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/lat_qua_report/`;
+
+        // 2) Use AbortController + timeout to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((res) => {
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+              throw new Error(`API error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then((json) => {
+            const raw = json.latest_raw;
+            // 3) For each “target” in latest_raw (e.g. "8.8.8.8", "1.1.1.1", …)
+            Object.keys(raw).forEach((targetKey) => {
+              const latencyObj = raw[targetKey].latency;
+              const rawLabels = latencyObj.labels; // ["time", "minimum", "maximum", "average"]
+              const rawData = latencyObj.data; // [[epoch, min, max, avg], … ]
+
+              const qualityObj = raw[targetKey].quality;
+              const qualityLabels = qualityObj.labels; // ["time", "minimum", "maximum", "average"]
+              const qualityData = qualityObj.data; // [[epoch, min, max, avg], … ]
+
+              //  • Step 1: reverse the rawData array so that we go oldest→newest
+              const reversedData = rawData.slice().reverse();
+              const qualityreversedData = qualityData.slice().reverse();
+
+              //  • Step 2: take only every 3rd element (idx % 3 === 0)
+              const filteredData = reversedData.filter(
+                (_, idx) => idx % 3 === 0
+              );
+              const qualityfilteredData = qualityreversedData.filter(
+                (_, idx) => idx % 3 === 0
+              );
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.b) From filteredData, extract timestamps, minSeries, maxSeries, avgSeries
+              // ────────────────────────────────────────────────────────────────
+              //    Each filteredData[i] is [ epochSec, minVal, maxVal, avgVal ].
+              const timestamps = filteredData.map((row) => row[0]);
+              const minSeries = filteredData.map((row) => row[1]);
+              const maxSeries = filteredData.map((row) => row[2]);
+              const avgSeries = filteredData.map((row) => row[3]);
+
+              const qualitytimestamps = qualityfilteredData.map(
+                (row) => row[0]
+              );
+              const returnedSeries = qualityfilteredData.map((row) => row[1]);
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.c) Convert those filtered epoch timestamps → "HH:mm"
+              // ────────────────────────────────────────────────────────────────
+              const labelsChrono = timestamps.map((epochSec) => {
+                const d = new Date(epochSec * 1000);
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                return `${hh}:${mm}`;
+              });
+              const qualitylabelsChrono = qualitytimestamps.map((epochSec) => {
+                const d = new Date(epochSec * 1000);
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                return `${hh}:${mm}`;
+              });
+              // 4) Create or update the chart for this targetKey
+              const canvasId = `latencyChart_${targetKey.replace(/\./g, "_")}`;
+              const qualitycanvasId = `qualityChart_${targetKey.replace(
+                /\./g,
+                "_"
+              )}`;
+              // We replace dots with underscores so the ID is valid (e.g. "8_8_8_8" instead of "8.8.8.8")
+
+              if (!latencyCharts[targetKey]) {
+                // ────────────────────────────────────────────────────────
+                // 4.a) No chart yet for this target, so build the DOM + Chart.js
+                // ────────────────────────────────────────────────────────
+                // 1) Create <div class="card-container">
+                const card_container = document.createElement("div");
+                card_container.classList.add("cards-container");
+                // 1) Create <div class="card">
+                const card = document.createElement("div");
+                card.classList.add("card");
+                card_container.appendChild(card);
+
+                // 2) Add <h3>Latency to {targetKey}</h3>
+                const heading = document.createElement("h3");
+                heading.textContent = `Latency to ${targetKey}`;
+                card.appendChild(heading);
+
+                // 3) Create <div class="chart-wrapper">
+                const wrapper = document.createElement("div");
+                wrapper.classList.add("chart-wrapper");
+                // Optionally set a fixed height in JS—but better to handle it in CSS:
+                // wrapper.style.height = "200px"; wrapper.style.width = "100%";
+
+                // 4) Create <canvas id="latencyChart_{targetKey}"></canvas>
+                const canvas = document.createElement("canvas");
+                canvas.id = canvasId;
+                wrapper.appendChild(canvas);
+
+                // 5) Nest wrapper → card → top-level container (#latencytrafficchartid)
+                card.appendChild(wrapper);
+                const topContainer = document.getElementById(
+                  "latencytrafficchartid"
+                );
+                topContainer.appendChild(card_container);
+
+                // 6) Initialize Chart.js on that new <canvas>
+                const ctx = canvas.getContext("2d");
+                latencyCharts[targetKey] = new Chart(ctx, {
+                  type: "line",
+                  data: {
+                    labels: labelsChrono,
+                    datasets: [
+                      {
+                        label: "Min (ms)",
+                        data: minSeries,
+                        borderColor: "#0C8EDE",
+                        backgroundColor: "rgba(12, 142, 222, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                      {
+                        label: "Max (ms)",
+                        data: maxSeries,
+                        borderColor: "#F39C12",
+                        backgroundColor: "rgba(243, 156, 18, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                      {
+                        label: "Avg (ms)",
+                        data: avgSeries,
+                        borderColor: "#27AE60",
+                        backgroundColor: "rgba(39, 174, 96, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                    ],
+                  },
+                  options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        display: true,
+                        grid: {
+                          display: true,
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                        ticks: {
+                          // Show only every 3rd label if number of points is large
+                          callback: function (val, index) {
+                            return index % 3 === 0
+                              ? this.getLabelForValue(val)
+                              : "";
+                          },
+                          maxRotation: 45,
+                          minRotation: 45,
+                          autoSkip: false,
+                          color: "#333",
+                        },
+                      },
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          // Display e.g. "0 ms", "50 ms", etc.
+                          callback: function (value) {
+                            return `${value} ms`;
+                          },
+                          color: "#333",
+                        },
+                        grid: {
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                      },
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          usePointStyle: false,
+                          boxWidth: 12,
+                        },
+                      },
+                      tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                          label: function (context) {
+                            const lab = context.dataset.label || "";
+                            const val = context.parsed.y;
+                            return `${lab}: ${val} ms`;
+                          },
+                        },
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                      mode: "index",
+                    },
+                  },
+                });
+              } else {
+                // ────────────────────────────────────────────────────────
+                // 4.d) Chart already exists for this targetKey → update data & labels
+                // ────────────────────────────────────────────────────────
+                const chart = latencyCharts[targetKey];
+                chart.data.labels = labelsChrono;
+                chart.data.datasets[0].data = minSeries;
+                chart.data.datasets[1].data = maxSeries;
+                chart.data.datasets[2].data = avgSeries;
+                chart.update();
+              }
+            });
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            if (err.name === "AbortError") {
+              console.error("Latency fetch aborted (timeout)");
+            } else {
+              console.error("Failed to load latency data:", err);
+            }
+          });
+      }
+
+      // 5) On page load, fetch once immediately, then re‐fetch every 60 s
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchAndRenderLatencyTraffic();
+        setInterval(fetchAndRenderLatencyTraffic, 60 * 1000);
+      });
+    </script>
+  -->
+
+    <script>
+      // Two lookup objects: one for latency‐charts, one for quality‐charts
+      const latencyCharts = {};
+      const qualityCharts = {};
+
+      function fetchAndRenderLatencyTraffic() {
+        // 1) Extract device PK from URL (e.g. "/device/abc123/")
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error(
+            "Cannot find device ID in URL for latency/quality charts"
+          );
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/lat_qua_report/`;
+
+        // 2) Use AbortController + timeout to avoid hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((res) => {
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+              throw new Error(`API error ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then((json) => {
+            const raw = json.latest_raw;
+
+            // For each “targetKey” (e.g., "8.8.8.8", "1.1.1.1", …)
+            Object.keys(raw).forEach((targetKey) => {
+              const latencyObj = raw[targetKey].latency;
+              const rawLatencyData = latencyObj.data; // [ [epoch, min, max, avg], … ]
+
+              const qualityObj = raw[targetKey].quality;
+              const rawQualityData = qualityObj.data; // [ [epoch, value], … ] (assuming structure)
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.a) Reverse + down-sample (every 3rd point = 1 min) for latency
+              // ────────────────────────────────────────────────────────────────
+              const reversedLatencyData = rawLatencyData.slice().reverse();
+              const filteredLatencyData = reversedLatencyData.filter(
+                (_, idx) => idx % 3 === 0
+              );
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.b) Build three series + timestamp array from filteredLatencyData
+              // ────────────────────────────────────────────────────────────────
+              // Each filteredLatencyData[i] = [ epochSec, minVal, maxVal, avgVal ]
+              const latencyTimestamps = filteredLatencyData.map(
+                (row) => row[0]
+              );
+              const minSeries = filteredLatencyData.map((row) => row[1]);
+              const maxSeries = filteredLatencyData.map((row) => row[2]);
+              const avgSeries = filteredLatencyData.map((row) => row[3]);
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.c) Convert those filtered epoch timestamps → "HH:mm"
+              // ────────────────────────────────────────────────────────────────
+              const labelsChrono = latencyTimestamps.map((epochSec) => {
+                const d = new Date(epochSec * 1000);
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                return `${hh}:${mm}`;
+              });
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.d) Reverse + down-sample for quality
+              // ────────────────────────────────────────────────────────────────
+              const reversedQualityData = rawQualityData.slice().reverse();
+              const filteredQualityData = reversedQualityData.filter(
+                (_, idx) => idx % 3 === 0
+              );
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.e) Build “quality” series + timestamp array from filteredQualityData
+              //    (Here we assume each filteredQualityData[i] = [ epochSec, qualityValue ])
+              // ────────────────────────────────────────────────────────────────
+              const qualityTimestamps = filteredQualityData.map(
+                (row) => row[0]
+              );
+              const returnedSeries = filteredQualityData.map((row) => row[1]);
+
+              // ────────────────────────────────────────────────────────────────
+              // 3.f) Convert “quality” timestamps → "HH:mm"
+              // ────────────────────────────────────────────────────────────────
+              const qualityLabelsChrono = qualityTimestamps.map((epochSec) => {
+                const d = new Date(epochSec * 1000);
+                const hh = String(d.getHours()).padStart(2, "0");
+                const mm = String(d.getMinutes()).padStart(2, "0");
+                return `${hh}:${mm}`;
+              });
+
+              // ────────────────────────────────────────────────────────────────
+              // 4) Prepare unique IDs for the two canvases (latency + quality)
+              // ────────────────────────────────────────────────────────────────
+              // Replace dots (“.”) so IDs are valid (e.g. "8_8_8_8" instead of "8.8.8.8")
+              const safeKey = targetKey.replace(/\./g, "_");
+              const latencyCanvasId = `latencyChart_${safeKey}`;
+              const qualityCanvasId = `qualityChart_${safeKey}`;
+
+              // ────────────────────────────────────────────────────────────────
+              // 5) Create / update DOM + Chart.js
+              // ────────────────────────────────────────────────────────────────
+              // We only create new card‐containers if we haven’t seen this targetKey before.
+              if (!latencyCharts[targetKey]) {
+                // ────────────────────────────────────────────────────────────
+                // 5.a) Build a new <div class="cards-container"> … </div> for this target
+                // ────────────────────────────────────────────────────────────
+                const cardContainer = document.createElement("div");
+                cardContainer.classList.add("cards-container");
+
+                // ----- LATENCY CARD -----
+                const latencyCard = document.createElement("div");
+                latencyCard.classList.add("card");
+
+                const latencyHeading = document.createElement("h3");
+                latencyHeading.textContent = `Latency to ${targetKey}`;
+                latencyCard.appendChild(latencyHeading);
+
+                const latencyWrapper = document.createElement("div");
+                latencyWrapper.classList.add("chart-wrapper");
+
+                const latencyCanvas = document.createElement("canvas");
+                latencyCanvas.id = latencyCanvasId;
+                // (Optionally set height in JS; better to do it in CSS.)
+                // latencyWrapper.style.height = "200px";
+                // latencyWrapper.style.width = "100%";
+
+                latencyWrapper.appendChild(latencyCanvas);
+                latencyCard.appendChild(latencyWrapper);
+
+                // ----- QUALITY CARD -----
+                const qualityCard = document.createElement("div");
+                qualityCard.classList.add("card");
+
+                const qualityHeading = document.createElement("h3");
+                qualityHeading.textContent = `Packet delivery rate to ${targetKey}`;
+                qualityCard.appendChild(qualityHeading);
+
+                const qualityWrapper = document.createElement("div");
+                qualityWrapper.classList.add("chart-wrapper");
+
+                const qualityCanvas = document.createElement("canvas");
+                qualityCanvas.id = qualityCanvasId;
+                // qualityWrapper.style.height = "200px";
+                // qualityWrapper.style.width = "100%";
+
+                qualityWrapper.appendChild(qualityCanvas);
+                qualityCard.appendChild(qualityWrapper);
+
+                // 5.b) Append both cards into our new cards‐container,
+                //      then insert that container under #latencytrafficchartid
+                cardContainer.appendChild(latencyCard);
+                cardContainer.appendChild(qualityCard);
+
+                const topContainer = document.getElementById(
+                  "latencytrafficchartid"
+                );
+                topContainer.appendChild(cardContainer);
+
+                // ────────────────────────────────────────────────────────────
+                // 5.c) Initialize Chart.js for LATENCY on its new <canvas>
+                // ────────────────────────────────────────────────────────────
+                const ctxLat = latencyCanvas.getContext("2d");
+                latencyCharts[targetKey] = new Chart(ctxLat, {
+                  type: "line",
+                  data: {
+                    labels: labelsChrono, // down‐sampled "HH:mm"
+                    datasets: [
+                      {
+                        label: "Min (ms)",
+                        data: minSeries,
+                        borderColor: "#0C8EDE",
+                        backgroundColor: "rgba(12, 142, 222, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                      {
+                        label: "Max (ms)",
+                        data: maxSeries,
+                        borderColor: "#F39C12",
+                        backgroundColor: "rgba(243, 156, 18, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                      {
+                        label: "Avg (ms)",
+                        data: avgSeries,
+                        borderColor: "#27AE60",
+                        backgroundColor: "rgba(39, 174, 96, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                    ],
+                  },
+                  options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        display: true,
+                        grid: {
+                          display: true,
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                        ticks: {
+                          autoSkip: true,
+                          maxRotation: 45,
+                          minRotation: 45,
+                          color: "#333",
+                          // If you’d rather force every label:
+                          // callback: function(val, index) {
+                          //   return this.getLabelForValue(val);
+                          // },
+                          // autoSkip: false,
+                        },
+                      },
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function (value) {
+                            return `${value} ms`;
+                          },
+                          color: "#333",
+                        },
+
+                        grid: {
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                      },
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          usePointStyle: false,
+                          boxWidth: 12,
+                        },
+                      },
+                      tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                          label: function (context) {
+                            const lab = context.dataset.label || "";
+                            const val = context.parsed.y;
+                            return `${lab}: ${val} ms`;
+                          },
+                        },
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                      mode: "index",
+                    },
+                  },
+                });
+
+                // ────────────────────────────────────────────────────────────
+                // 5.d) Initialize Chart.js for QUALITY on its new <canvas>
+                // ────────────────────────────────────────────────────────────
+                const qualitymin = Math.min(...returnedSeries);
+                const ctxQua = qualityCanvas.getContext("2d");
+                qualityCharts[targetKey] = new Chart(ctxQua, {
+                  type: "line",
+                  data: {
+                    labels: qualityLabelsChrono, // “HH:mm” for quality
+                    datasets: [
+                      {
+                        label: "Quality Value",
+                        data: returnedSeries,
+                        borderColor: "#8E44AD",
+                        backgroundColor: "rgba(142, 68, 173, 0.2)",
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        tension: 0.3,
+                      },
+                    ],
+                  },
+                  options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        display: true,
+                        grid: {
+                          display: true,
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                        ticks: {
+                          autoSkip: true,
+                          maxRotation: 45,
+                          minRotation: 45,
+                          color: "#333",
+                        },
+                      },
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          // Adjust this callback to whatever unit “quality” uses
+                          callback: function (value) {
+                            return `${value}`;
+                          },
+                          color: "#333",
+                        },
+
+                        grid: {
+                          color: "#e0e0e0",
+                          borderDash: [4, 4],
+                        },
+                      },
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          usePointStyle: false,
+                          boxWidth: 12,
+                        },
+                      },
+                      tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                          label: function (context) {
+                            const lab = context.dataset.label || "";
+                            const val = context.parsed.y;
+                            return `${lab}: ${val}`;
+                          },
+                        },
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                      mode: "index",
+                    },
+                  },
+                });
+              } else {
+                // ────────────────────────────────────────────────────────────
+                // 5.e) If the charts already exist for this targetKey, just update:
+                // ────────────────────────────────────────────────────────────
+                const latencyChart = latencyCharts[targetKey];
+                latencyChart.data.labels = labelsChrono;
+                latencyChart.data.datasets[0].data = minSeries;
+                latencyChart.data.datasets[1].data = maxSeries;
+                latencyChart.data.datasets[2].data = avgSeries;
+                latencyChart.update();
+
+                const qualityChart = qualityCharts[targetKey];
+                qualityChart.data.labels = qualityLabelsChrono;
+                qualityChart.data.datasets[0].data = returnedSeries;
+                qualityChart.update();
+              }
+            });
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            if (err.name === "AbortError") {
+              console.error("Latency/Quality fetch aborted (timeout)");
+            } else {
+              console.error("Failed to load latency/quality data:", err);
+            }
+          });
+      }
+
+      // 6) On page load, fetch once immediately, then re‐fetch every 60s
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchAndRenderLatencyTraffic();
+        setInterval(fetchAndRenderLatencyTraffic, 60 * 1000);
+      });
+    </script>
+  </body>
+</html>

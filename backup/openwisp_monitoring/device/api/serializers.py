@@ -7,6 +7,18 @@ from openwisp_controller.geo.api.serializers import (
     LocationDeviceSerializer,
 )
 from openwisp_users.api.mixins import FilterSerializerByOrgManaged
+from openwisp_monitoring.device.models import DPIRecord
+from openwisp_monitoring.device.models import TSIPReport
+from openwisp_monitoring.device.models import ClientSummary
+from openwisp_monitoring.device.models import RealTraffic
+from openwisp_monitoring.device.models import InterfaceList
+from openwisp_monitoring.device.models import InerfaceEvents
+from openwisp_monitoring.device.models import InterfaceTraffic
+from openwisp_monitoring.device.models import LatquaList
+from openwisp_monitoring.device.models import WanStatus
+from openwisp_monitoring.device.models import IpsecTunnels
+from openwisp_monitoring.device.models import ConfigPush
+from openwisp_monitoring.device.models import SpokeStatus
 
 Device = load_model('config', 'Device')
 DeviceMonitoring = load_model('device_monitoring', 'DeviceMonitoring')
@@ -53,6 +65,9 @@ class MonitoringNearbyDeviceSerializer(
     distance = serializers.SerializerMethodField('get_distance')
     monitoring_data = serializers.SerializerMethodField('get_monitoring_data')
 
+
+
+
     class Meta(DeviceListSerializer.Meta):
         model = Device
         fields = [
@@ -64,6 +79,7 @@ class MonitoringNearbyDeviceSerializer(
             'management_ip',
             'model',
             'os',
+            'serial_number',
             'system',
             'notes',
             'distance',
@@ -154,3 +170,130 @@ class WifiSessionSerializer(serializers.ModelSerializer):
             'stop_time',
             'modified',
         ]
+
+
+
+# # dpi
+ 
+class DPIRecordSerializer(serializers.ModelSerializer):
+    # class Meta:
+    #     model = DPIRecord
+    #     fields = ['device', 'timestamp', 'raw']
+    #     read_only_fields = ['created']
+
+
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = DPIRecord
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+ 
+class TSIPreportSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = TSIPReport
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class ClientreportSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = ClientSummary
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class RealTrafficSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = RealTraffic
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class InerfaceEventsSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = InerfaceEvents
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class InterfaceListSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = InterfaceList
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class InterfaceTrafficSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = InterfaceTraffic
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class LatquaListSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = LatquaList
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class WanStatusSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = WanStatus
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class IpsecTunnelsSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = IpsecTunnels
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+
+class ConfigPushSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = ConfigPush
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+
+class SpokeStatusSerializer(serializers.ModelSerializer):
+   
+    device = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = SpokeStatus
+        fields = ['device', 'timestamp', 'raw']
+        read_only_fields = ['created', 'device']
+

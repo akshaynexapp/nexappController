@@ -1,0 +1,17 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>Bandwidth Usage — WAN Links</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Utilization Over Time</h2><div class="chart">[Throughput Area Chart Placeholder]</div></div>
+<div class="section">
+  <h2>Ranked Links</h2>
+  <table>
+    <thead><tr><th>Site</th><th>Device</th><th>Interface</th><th>Provider</th><th>Avg Mbps</th><th>Peak Mbps</th><th>95th %</th><th>Total GB</th></tr></thead>
+    <tbody>
+      {% for l in ranked_links %}
+      <tr><td>{{ l.site_name }}</td><td>{{ l.device_name }}</td><td>{{ l.ifname }}</td><td>{{ l.provider }}</td><td>{{ l.avg_mbps }}</td><td>{{ l.peak_mbps }}</td><td>{{ l.p95_mbps }}</td><td>{{ l.total_gb }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

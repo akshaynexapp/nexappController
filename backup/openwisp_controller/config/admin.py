@@ -37,7 +37,6 @@ from openwisp_utils.admin import (
     TimeReadonlyAdminMixin,
     UUIDAdmin,
 )
-
 from ..admin import MultitenantAdminMixin
 from . import settings as app_settings
 from .base.vpn import AbstractVpn
@@ -487,13 +486,16 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
     )
     list_display = [
         'name',
-        'backend',
+        # 'backend',
+        'serial_number',
+        'model',
         'group',
         'config_status',
-        'mac_address',
         'ip',
+        'mac_address',
         'created',
         'modified',
+
     ]
     list_filter = [
         'config__status',
@@ -525,6 +527,8 @@ class DeviceAdmin(MultitenantAdminMixin, BaseConfigAdmin, UUIDAdmin):
         'management_ip',
         'model',
         'os',
+        'serial_number',
+
         'system',
         'notes',
         'created',
@@ -1351,3 +1355,4 @@ if getattr(app_settings, 'REGISTRATION_ENABLED', True):
     limits_inline_position = 1
 
 OrganizationAdmin.inlines.insert(limits_inline_position, OrganizationLimitsInline)
+

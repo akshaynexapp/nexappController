@@ -1,0 +1,62 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{# Swallow all default inlines so they don't render under your tabs #}
+{% block inline_field_sets %}{% endblock %}
+
+{% block field_sets %}
+  {# Only on edit (not add) #}
+  {% if not add %}
+    <div id="tabs-container">
+      {#  The tab buttons (unstyled list removed) #}
+      <ul class="tabs" style="list-style:none; margin:0; padding:0; display:flex;">
+        <li style="margin-right:4px;list-style:none; "><a class="button" href="#sdwan-zone">SDWAN Zone</a></li>
+        <li style="margin-right:4px;list-style:none; "><a class="button" href="#sdwan-rule">SDWAN Rule</a></li>
+        <li style="margin-right:4px;list-style:none; "><a class="button" href="#sdwan-parameter">SDWAN Parameters</a></li>
+      </ul>
+      <div class="tabs-divider"></div>
+
+      {#  Your three panes, all inside the same wrapper #}
+      <div class="inline-group module aligned tab-content" id="sdwan-zone" style="display:none;">
+        <fieldset class="module aligned">
+          {% include "admin/sdwan_tunnel/pathselectionpolicy/zone.html" %}
+        </fieldset>
+      </div>
+      <div class="inline-group module aligned tab-content" id="sdwan-rule" style="display:none;">
+        <fieldset class="module aligned">
+          {% include "admin/sdwan_tunnel/pathselectionpolicy/rule.html" %}
+        </fieldset>
+      </div>
+      <div class="inline-group module aligned tab-content" id="sdwan-parameter" style="display:none;">
+        <fieldset class="module aligned">
+          {% include "admin/sdwan_tunnel/pathselectionpolicy/parameter.html" %}
+        </fieldset>
+      </div>
+    </div>
+
+    {#  Tab-switching JavaScript #}
+    <script type="text/javascript">
+      (function($) {
+        $(function(){
+          // Activate first tab on load
+          var tabs = $('#tabs-container .tabs a');
+          tabs.first().addClass('active').each(function(){
+            $($(this).attr('href')).show();
+          });
+          // On click, switch panes
+          tabs.on('click', function(e){
+            e.preventDefault();
+            tabs.removeClass('active');
+            $(this).addClass('active');
+            // hide all, show target
+            $('#tabs-container .tab-content').hide();
+            $($(this).attr('href')).show();
+          });
+        });
+      })(django.jQuery);
+    </script>
+  {% endif %}
+
+  {# Render the standard fieldsets *after* your tabs (if any remain) #}
+  {{ block.super }}
+{% endblock %}

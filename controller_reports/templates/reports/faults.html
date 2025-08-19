@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Fault Analysis</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Faults by Category</h2><div class="chart">[Stacked Bar Placeholder]</div></div>
+<div class="section">
+  <h2>MTBF / MTTR</h2>
+  <table>
+    <thead><tr><th>Site</th><th>Device</th><th>Category</th><th>Faults</th><th>MTBF (h)</th><th>MTTR (h)</th></tr></thead>
+    <tbody>
+      {% for f in fault_rows %}
+      <tr><td>{{ f.site_name }}</td><td>{{ f.device_name }}</td><td>{{ f.category }}</td><td>{{ f.count }}</td><td>{{ f.mtbf_h }}</td><td>{{ f.mttr_h }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

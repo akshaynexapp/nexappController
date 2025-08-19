@@ -17,7 +17,7 @@ from ..signals import device_registered
 
 Vpn = load_model('config', 'Vpn')
 Device = load_model('config', 'Device')
-Notification = load_model('openwisp_notifications', 'Notification')
+Notification = load_model('nexapp_notifications', 'Notification')
 
 notification_qs = Notification.objects.all()
 

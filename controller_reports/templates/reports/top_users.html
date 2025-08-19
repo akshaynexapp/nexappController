@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Top Users — Upload / Download</h1>
+{% include "reports/_kpi.html" %}
+<div class="section">
+  <table>
+    <thead><tr><th>User</th><th>Site</th><th>Bytes Down</th><th>Bytes Up</th><th>Sessions</th><th>Peak Mbps</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr><td>{{ u.user_name }}</td><td>{{ u.site_name }}</td><td>{{ u.bytes_down }}</td><td>{{ u.bytes_up }}</td><td>{{ u.sessions }}</td><td>{{ u.peak_mbps }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="note">Identity mapping via DHCP/RADIUS/Directory sync; fallback to IP/MAC if missing.</div>
+{% endblock %}

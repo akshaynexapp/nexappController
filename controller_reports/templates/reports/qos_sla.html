@@ -1,0 +1,18 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>QoS & SLA Performance</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Latency / Jitter / Loss Over Time</h2><div class="chart">[QoS Line Chart Placeholder]</div></div>
+<div class="section"><h2>Availability Heatmap</h2><div class="chart">[Heatmap Placeholder]</div></div>
+<div class="section">
+  <h2>Paths / Tunnels</h2>
+  <table>
+    <thead><tr><th>Device</th><th>Hub</th><th>Path</th><th>Latency (avg/95th)</th><th>Jitter (avg/95th)</th><th>Loss %</th><th>Availability %</th></tr></thead>
+    <tbody>
+      {% for p in paths %}
+      <tr><td>{{ p.device_name }}</td><td>{{ p.hub_name }}</td><td>{{ p.path }}</td><td>{{ p.lat_avg }} / {{ p.lat_p95 }}</td><td>{{ p.jit_avg }} / {{ p.jit_p95 }}</td><td>{{ p.loss_pct }}</td><td>{{ p.availability_pct }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

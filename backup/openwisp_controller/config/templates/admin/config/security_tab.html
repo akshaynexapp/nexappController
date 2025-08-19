@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+      #blocked_threats_total,
+      #blocked_Ip_total {
+        color: rgb(67 56 202);
+        font-weight: 500;
+        font-size: 1.5rem;
+        line-height: 2rem;
+      }
+      .cards-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .card {
+        flex: 1 1 45%;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #111827;
+      }
+      .chart-wrapper {
+        position: relative;
+        height: 200px;
+        width: 100%;
+      }
+      .no-data {
+        display: none;
+        text-align: center;
+        color: #6b7280; /* gray-500 */
+        font-family: sans-serif;
+        margin: 1rem 0;
+      }
+      .no-data svg {
+        width: 200px;
+        height: 200px;
+        fill: none;
+        stroke: #9ca3af; /* gray-400 */
+        stroke-width: 5;
+      }
+      .no-data p {
+        margin: 0.5rem 0 0;
+        font-size: 2.5rem; /* 14px */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Blocklist -->
+    <h2 style="color: #111827">Blocklist</h2>
+
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap">
+      <div style="flex: 1 1 10%">
+        <div
+          style="
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #111827;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          "
+        >
+          <h3>Blocked threats</h3>
+          <p id="blocked_threats_total">loading ...</p>
+        </div>
+      </div>
+
+      <div
+        class="card"
+        style="
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          margin-bottom: 1rem;
+        "
+      >
+        <h3 style="margin: 0 0 0.75rem; font-weight: bold">
+          Blocked threats by hour
+        </h3>
+        <div
+          style="
+            position: relative;
+            width: 100%;
+            height: 210px;
+            margin-bottom: 0.5rem;
+          "
+        >
+          <canvas
+            id="security-traffic-chart"
+            style="width: 100%; height: 100%"
+          ></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>Threats by direction</h3>
+        <div id="ipPieChart-no-data" class="no-data">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <!-- axes -->
+            <path d="M8 56 V16 H56" />
+            <!-- zig-zag line -->
+            <polyline
+              points="12,48 24,40 36,44 48,32"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <p>No data available</p>
+        </div>
+        <div id="ippiechartwrapper" class="chart-wrapper">
+          <canvas id="ipPieChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Threats by category</h3>
+        <div id="ipPieChart2-no-data" class="no-data">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <!-- axes -->
+            <path d="M8 56 V16 H56" />
+            <!-- zig-zag line -->
+            <polyline
+              points="12,48 24,40 36,44 48,32"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <p>No data available</p>
+        </div>
+        <div id="ippiechart2wrapper" class="chart-wrapper">
+          <canvas id="ipPieChart2"></canvas>
+        </div>
+      </div>
+    </div>
+    <br />
+    <br />
+    <!-- Brut force attack -->
+    <h2 style="color: #111827">Brute force attacks</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap">
+      <div style="flex: 1 1 10%">
+        <div
+          style="
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #111827;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          "
+        >
+          <h3>Blocked IP addresses</h3>
+          <p id="blocked_Ip_total">loading ...</p>
+        </div>
+      </div>
+
+      <div
+        class="card"
+        style="
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          padding: 1rem;
+          margin-bottom: 1rem;
+        "
+      >
+        <h3 style="margin: 0 0 0.75rem; font-weight: bold">
+          Blocked IP addresses by hour
+        </h3>
+        <div id="blockedipChart-no-data" class="no-data">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <!-- axes -->
+            <path d="M8 56 V16 H56" />
+            <!-- zig-zag line -->
+            <polyline
+              points="12,48 24,40 36,44 48,32"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <p>No data available</p>
+        </div>
+        <div
+          id="blockedipChart-wrapper"
+          style="
+            position: relative;
+            width: 100%;
+            height: 210px;
+            margin-bottom: 0.5rem;
+          "
+        >
+          <canvas
+            id="blocked-ip-chart"
+            style="width: 100%; height: 100%"
+          ></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-container">
+      <div class="card">
+        <h3>Most frequently blocked IP addresses</h3>
+        <div id="blockedippieChart-no-data" class="no-data">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <!-- axes -->
+            <path d="M8 56 V16 H56" />
+            <!-- zig-zag line -->
+            <polyline
+              points="12,48 24,40 36,44 48,32"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <p>No data available</p>
+        </div>
+        <div id="blockedippieChart-wrapper" class="chart-wrapper">
+          <canvas id="blockedippieChart"></canvas>
+        </div>
+      </div>
+
+      <div
+        class=""
+        style="
+          flex: 1 1 45%;
+          background: #fff;
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        "
+      ></div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/tsipreport/`;
+
+        // 1) Create controller + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((response) => {
+            clearTimeout(timeoutId); // <— stop the timer on any resolution
+            if (!response.ok) {
+              throw new Error(
+                `API error ${response.status}: ${response.statusText}`
+              );
+            }
+            return response.json();
+          })
+          .then((json) => {
+            const blockList = json.latest_raw.BlockList;
+            const attackReport = json.latest_raw.Brute_Force_Attack;
+            // 5) Inject counts into your DOM:
+            document.getElementById("blocked_threats_total").textContent =
+              blockList.malware_count;
+            document.getElementById("blocked_Ip_total").textContent =
+              attackReport.attack_count;
+
+            const chainObj = blockList.malware_by_chain; // { "pre-icmp": 2938, "pre-ct": 94 }
+            const chainLabels = Object.keys(chainObj); // ["pre-icmp","pre-ct"]
+            const chainCounts = Object.values(chainObj);
+            const colors = ["#06B6D4", "#6366F1"];
+            const ipPieChartcanvas =
+              document.getElementById("ippiechartwrapper");
+            const noData = document.getElementById("ipPieChart-no-data");
+            const hasData =
+              chainCounts.length > 0 && chainCounts.some((v) => v !== 0);
+
+            if (!hasData) {
+              // hide the canvas, show SVG
+              ipPieChartcanvas.style.display = "none";
+              noData.style.display = "block";
+            } else {
+              new Chart(
+                document.getElementById("ipPieChart").getContext("2d"),
+                {
+                  type: "pie",
+                  data: {
+                    labels: chainLabels,
+                    datasets: [
+                      {
+                        data: chainCounts,
+                        backgroundColor: [
+                          "#06B6D4",
+                          "#6366F1",
+                          "#10B981",
+                          "#EC4899",
+                          "#F59E0B",
+                        ],
+                        borderColor: "#fff",
+                        borderWidth: 2,
+                      },
+                    ],
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "right",
+                        align: "center",
+                        labels: { boxWidth: 12, padding: 8, color: "#374151" },
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`,
+                        },
+                      },
+                    },
+                  },
+                }
+              );
+            }
+
+            const malwarecategoryObj = blockList.malware_by_category; // { "pre-icmp": 2938, "pre-ct": 94 }
+            const malwarecategoryLabels = Object.keys(malwarecategoryObj); // ["pre-icmp","pre-ct"]
+            const malwarecategoryCounts = Object.values(malwarecategoryObj);
+
+            const ipPieChart2canvas =
+              document.getElementById("ippiechart2wrapper");
+            const piechart2noData = document.getElementById(
+              "ipPieChart2-no-data"
+            );
+            const piechart2hasData =
+              malwarecategoryCounts.length > 0 &&
+              malwarecategoryCounts.some((v) => v !== 0);
+
+            if (!piechart2hasData) {
+              // hide the canvas, show SVG
+              ipPieChart2canvas.style.display = "none";
+              piechart2noData.style.display = "block";
+            } else {
+              new Chart(
+                document.getElementById("ipPieChart2").getContext("2d"),
+                {
+                  type: "pie",
+                  data: {
+                    labels: malwarecategoryLabels,
+                    datasets: [
+                      {
+                        data: malwarecategoryCounts,
+                        backgroundColor: [
+                          "#06B6D4",
+                          "#6366F1",
+                          "#10B981",
+                          "#EC4899",
+                          "#F59E0B",
+                        ],
+                        borderColor: "#fff",
+                        borderWidth: 2,
+                      },
+                    ],
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "right",
+                        align: "center",
+                        labels: { boxWidth: 12, padding: 8, color: "#374151" },
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`,
+                        },
+                      },
+                    },
+                  },
+                }
+              );
+            }
+            //Blocked ip address  by hour BAR GRAPH
+            const mh = blockList.malware_by_hour; // [[0,70],[1,79],[2,13],…]
+            const labels = mh.map(
+              ([h]) => h.toString().padStart(2, "0") + ":00"
+            );
+            const counts = mh.map(([, count]) => count);
+            const yMax = Math.max(...counts) + 10;
+
+            const blockedippieChartcanvas = document.getElementById(
+              "blockedippieChart-wrapper"
+            );
+            const blockedippieChartnoData = document.getElementById(
+              "blockedippieChart-no-data"
+            );
+            const blockedippieCharthasData =
+              counts.length > 0 && counts.some((v) => v !== 0);
+
+            if (!blockedippieCharthasData) {
+              // hide the canvas, show SVG
+              blockedippieChartcanvas.style.display = "none";
+              blockedippieChartnoData.style.display = "block";
+            } else {
+              new Chart(
+                document
+                  .getElementById("security-traffic-chart")
+                  .getContext("2d"),
+                {
+                  type: "bar",
+                  data: {
+                    labels: labels,
+                    datasets: [
+                      {
+                        label: "blocked threats",
+                        data: counts,
+                        backgroundColor: "#0891B2",
+                      },
+                    ],
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        ticks: {
+                          maxRotation: 0,
+                          autoSkip: true,
+                          maxTicksLimit: 13,
+                        },
+                      },
+                      y: {
+                        min: 0,
+                        max: yMax,
+                      },
+                    },
+                    layout: {
+                      padding: { left: 0, right: 0, top: 0, bottom: 0 },
+                    },
+                  },
+                }
+              );
+            }
+
+            const attackByHour = attackReport.attack_by_hour; // [[0,70],[1,79],[2,13],…]
+            const attackByHourlabels = attackByHour.map(
+              ([h]) => h.toString().padStart(2, "0") + ":00"
+            );
+            const attackByHourcounts = attackByHour.map(([, count]) => count);
+            const attackByHouryMax = Math.max(...attackByHourcounts) + 10;
+
+            // bar chart
+            const blockedipChartcanvas = document.getElementById(
+              "blockedipChart-wrapper"
+            );
+            const blockedipChartnoData = document.getElementById(
+              "blockedipChart-no-data"
+            );
+            const blockedipCharthasData = attackByHourcounts.length > 0;
+
+            if (!blockedippieCharthasData) {
+              // hide the canvas, show SVG
+              blockedipChartcanvas.style.display = "none";
+              blockedipChartnoData.style.display = "block";
+            } else {
+              new Chart(
+                document.getElementById("blocked-ip-chart").getContext("2d"),
+                {
+                  type: "bar",
+                  data: {
+                    labels: attackByHourlabels,
+                    datasets: [
+                      {
+                        label: "",
+                        data: attackByHourcounts,
+                        backgroundColor: "#0891B2",
+                      },
+                    ],
+                  },
+                  options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        ticks: {
+                          maxRotation: 0,
+                          autoSkip: true,
+                          maxTicksLimit: 13,
+                        },
+                      },
+                      y: {
+                        min: 0,
+                        max: attackByHouryMax,
+                      },
+                    },
+                    layout: {
+                      padding: { left: 0, right: 0, top: 0, bottom: 0 },
+                    },
+                  },
+                }
+              );
+            }
+
+            const attackipObj = attackReport.attack_by_ip; // { "pre-icmp": 2938, "pre-ct": 94 }
+            const attackipLabels = Object.keys(attackipObj); // ["pre-icmp","pre-ct"]
+            const attackipCounts = Object.values(attackipObj);
+            const attackipcolors = ["#06B6D4", "#6366F1"];
+
+            new Chart(
+              document.getElementById("blockedippieChart").getContext("2d"),
+              {
+                type: "pie",
+                data: {
+                  labels: attackipLabels,
+                  datasets: [
+                    {
+                      data: attackipCounts,
+                      backgroundColor: [
+                        "#06B6D4",
+                        "#6366F1",
+                        "#10B981",
+                        "#EC4899",
+                        "#F59E0B",
+                      ],
+                      borderColor: "#fff",
+                      borderWidth: 2,
+                    },
+                  ],
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: "right",
+                      align: "center",
+                      labels: { boxWidth: 12, padding: 8, color: "#374151" },
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: (ctx) => `${ctx.label}: ${ctx.parsed} MB`,
+                      },
+                    },
+                  },
+                },
+              }
+            );
+          })
+
+          .catch((err) => {
+            clearTimeout(timeoutId); // <— also clear on error
+            if (err.name === "AbortError") {
+              console.error("Fetch aborted (timeout)");
+            } else {
+              console.error("Fetch failed:", err);
+            }
+          });
+      });
+    </script>
+  </body>
+</html>

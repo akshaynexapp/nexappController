@@ -25,19 +25,19 @@ class User(AbstractUser):
 class Organization(BaseOrganization, AbstractOrganization):
     class Meta(AbstractOrganization.Meta):
         swappable = swappable_setting('nexapp_users', 'Organization')
-        db_table = 'openwisp_users_organization'
+        # db_table = 'openwisp_users_organization'
 
 
 class OrganizationUser(BaseOrganizationUser, AbstractOrganizationUser):
     class Meta(AbstractOrganizationUser.Meta):
         swappable =  swappable_setting('nexapp_users', 'OrganizationUser')
-        db_table = 'openwisp_users_organizationuser'
+        # db_table = 'openwisp_users_organizationuser'
 
 
 class OrganizationOwner(BaseOrganizationOwner, AbstractOrganizationOwner):
     class Meta(AbstractOrganizationOwner.Meta):
         swappable =  swappable_setting('nexapp_users', 'OrganizationOwner')
-        db_table = 'openwisp_users_organizationowner'
+        # db_table = 'openwisp_users_organizationowner'
 
 
 # only needed for compatibility with django-organizations~=2.x

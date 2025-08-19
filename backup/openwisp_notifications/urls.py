@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from .api.urls import get_api_urls
+app_name = 'notifications'
 
 
 def get_urls(api_views=None, social_views=None):
@@ -15,5 +16,4 @@ def get_urls(api_views=None, social_views=None):
     return urls
 
 
-app_name = 'notifications'
 urlpatterns = get_urls()

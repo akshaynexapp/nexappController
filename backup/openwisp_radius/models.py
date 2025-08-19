@@ -94,17 +94,17 @@ class OrganizationRadiusSettings(AbstractOrganizationRadiusSettings):
     class Meta(AbstractOrganizationRadiusSettings.Meta):
         abstract = False
         swappable = swappable_setting('nexapp_radius', 'OrganizationRadiusSettings')
-        db_table = 'openwisp_radius_organizationradiussettings'
+        # db_table = 'openwisp_radius_organizationradiussettings'
 
 class PhoneToken(AbstractPhoneToken):
     class Meta(AbstractPhoneToken.Meta):
         abstract = False
         swappable = swappable_setting('nexapp_radius', 'PhoneToken')
-        db_table = 'openwisp_radius_phonetoken'
+        # db_table = 'openwisp_radius_phonetoken'
 
 
 class RegisteredUser(AbstractRegisteredUser):
     class Meta(AbstractRegisteredUser.Meta):
         abstract = False
         swappable = swappable_setting('nexapp_radius', 'RegisteredUser')
-        db_table = 'openwisp_radius_registereduser'
+        # db_table = 'openwisp_radius_registereduser'

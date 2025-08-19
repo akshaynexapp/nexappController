@@ -1,0 +1,16 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>Application Performance</h1>
+{% include "reports/_kpi.html" %}
+<div class="section">
+  <h2>Experience by Application</h2>
+  <table>
+    <thead><tr><th>Application</th><th>Latency (avg)</th><th>Loss %</th><th>Outages</th><th>Bytes</th></tr></thead>
+    <tbody>
+      {% for a in app_perf %}
+      <tr><td>{{ a.application }}</td><td>{{ a.latency_ms }}</td><td>{{ a.loss_pct }}</td><td>{{ a.outages }}</td><td>{{ a.bytes_total }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

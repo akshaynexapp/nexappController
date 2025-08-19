@@ -12,7 +12,10 @@ url_metadata = [
     {
         'regexp': '',
         'app': 'openwisp_notifications',
-        'include': {'module': 'openwisp_notifications.urls'},
+        'include': {
+            'module': 'openwisp_notifications.urls',
+           
+            },
     },
     # openwisp_ipam
     # {

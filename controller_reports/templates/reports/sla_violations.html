@@ -1,0 +1,16 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>SLA Violations</h1>
+{% include "reports/_kpi.html" %}
+<div class="section">
+  <h2>Violations</h2>
+  <table>
+    <thead><tr><th>Policy Scope</th><th>Metric</th><th>Threshold</th><th>Observed</th><th>Start</th><th>End</th><th>Duration</th><th>Impact (GB)</th></tr></thead>
+    <tbody>
+      {% for v in violations %}
+      <tr><td>{{ v.scope }}</td><td>{{ v.metric }}</td><td>{{ v.threshold }}</td><td>{{ v.observed }}</td><td>{{ v.start }}</td><td>{{ v.end }}</td><td>{{ v.duration }}</td><td>{{ v.impact_gb }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -50,32 +50,22 @@
     <span class="label">{{ item.label }}</span>
   </a>
   {% endif %} {% endfor %}
-  <a
-    class="menu-item"
-    href="/nexappdevices/data"
-    aria-label="Real-Time Monitorong"
-  >
-    <span class="ow-datamonitoring-icon icon"></span>
-    <span class="label">Real-Time Monitoring</span>
-  </a>
-  <a class="menu-item" href="/vpn/ipsec/get-config" aria-label="network">
-    <span class="ow-datamonitoring-icon icon"></span>
-    <span class="label">Network</span>
-  </a>
-
+ 
+  
+<!-- 
   <div class="menu-group">
     <div
-      id="mg-control-nexapp-vpn"
-      aria-label="Nexapp_VPN"
+      id="mg-control-tunnel"
+      aria-label="Tunnel"
       tabindex="0"
       role="button"
       aria-expanded="false"
-      aria-controls="mg-dropdown-nexapp-vpn"
+      aria-controls="mg-dropdown-tunnel"
       class="mg-head"
     >
       <div class="mg-heading">
-        <span class="ow-nexapp-vpn-icon icon"></span>
-        <span class="label">Nexapp VPN</span>
+        <span class="ow-tunnel-icon icon"></span>
+        <span class="label">Tunnel</span>
       </div>
       <span class="mg-arrow"></span>
     </div>
@@ -86,20 +76,42 @@
       aria-labelledby="mg-control-nexapp-vpn"
       class="mg-dropdown"
     >
-      <div class="mg-dropdown-label">Nexapp VPN</div>
+      <div class="mg-dropdown-label">Tunnel</div>
       <ul class="mg-list">
         <li>
           <a
             class="mg-link"
-            href="/admin/nexapp_vpn/tunnel/"
+            href="/admin/sdwan_tunnel/tunnel/"
             aria-label="Tunnel"
             tabindex="-1"
           >
-            <span class="ow-tunnel-icon icon"></span>
-            <span class="label">Tunnel</span>
+            <span class="ow-site-to-site-icon icon"></span>
+            <span class="label">Site-to-Site</span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="mg-link"
+            href="/admin/sdwan_tunnel/hub/"
+            aria-label="Tunnel"
+            tabindex="-1"
+          >
+            <span class="ow-hub-icon icon"></span>
+            <span class="label">Hub</span>
+          </a>
+        </li>
+        <li>
+          <a
+            class="mg-link"
+            href="/admin/sdwan_tunnel/spoke/"
+            aria-label="Tunnel"
+            tabindex="-1"
+          >
+            <span class="ow-spoke-icon icon"></span>
+            <span class="label">Spoke</span>
           </a>
         </li>
       </ul>
     </div>
-  </div>
+  </div> -->
 </nav>

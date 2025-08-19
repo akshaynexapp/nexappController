@@ -5,6 +5,7 @@ def get_ipsec_payloads(tunnel, mgmt_ip_b, mgmt_ip_a, spoke=None):
     """
     payloads = []
     hub   = tunnel.device_a
+    remotes = tunnel.device_b
     # remotes = [tunnel.device_b.first()] if tunnel.mode == 'site_to_site' else list(tunnel.device_b.all())
     if spoke:
         remotes = [spoke]

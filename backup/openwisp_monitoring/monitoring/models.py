@@ -19,3 +19,4 @@ class AlertSettings(AbstractAlertSettings):
     class Meta(AbstractAlertSettings.Meta):
         abstract = False
         swappable = swappable_setting('monitoring', 'AlertSettings')
+

@@ -19,8 +19,8 @@ DEBUG = False
 
 # # 2. Tell it what content/serialization to expect
 # CELERY_ACCEPT_CONTENT    = ['json']
-# CELERY_TASK_SERIALIZER   = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
+ #CELERY_TASK_SERIALIZER   = 'json'
+ #CELERY_RESULT_SERIALIZER = 'json'
 
 ALLOWED_HOSTS = [
     '3.6.121.36',
@@ -42,6 +42,12 @@ OPENWISP_USERS_ORGANIZATIONOWNER_MODEL = 'nexapp_users.OrganizationOwner'
 OPENWISP_USERS_ORGANIZATIONINVITATION_MODEL = 'nexapp_users.OrganizationInvitation'
 OPENWISP_USERS_GROUP_MODEL = 'nexapp_users.Group'
 AUTH_USER_MODEL = 'nexapp_users.User'
+OPENWISP_CONTROLLER_GROUP_PIE_CHART = True
+OPENWISP_ORGANIZATION_USER_ADMIN = True  # tests will fail without this setting
+OPENWISP_ADMIN_DASHBOARD_ENABLED = True
+# OPENWISP_NOTIFICATIONS_NOTIFICATION_MODEL         = 'nexapp_notifications.Notification'
+# OPENWISP_NOTIFICATIONS_NOTIFICATIONSETTING_MODEL  = 'nexapp_notifications.NotificationSetting'
+# OPENWISP_NOTIFICATIONS_IGNOREOBJECTNOTIFICATION_MODEL = 'nexapp_notifications.IgnoreObjectNotification'
 
 # Application definition
 USERS_AUTH_THROTTLE_RATE = None
@@ -59,11 +65,15 @@ INSTALLED_APPS = [
     # must precede allauth
     'openwisp_users.accounts',
     'allauth',
+    'controller_reports',
+    'traffic_application',
     'allauth.account',
     'allauth.socialaccount',
     'django_extensions',
     # openwisp2 modules
-    # 'openwisp_users',
+   # 'openwisp_users',
+   # 'nexapp_users',
+   # 'nexapp_users.apps.OpenWispUsersConfig',
     'openwisp_controller',
     'openwisp_controller.pki',
     'openwisp_controller.config',
@@ -72,7 +82,7 @@ INSTALLED_APPS = [
     'openwisp_monitoring.monitoring',
     'openwisp_monitoring.device',
     'openwisp_users.apps.OpenwispUsersConfig',  # This is correct
-
+    'openwisp_firmware_upgrader',
     'openwisp_monitoring.check',
     'vpn_ipsec',
     'sdwan_tunnel',
@@ -85,7 +95,7 @@ INSTALLED_APPS = [
     'openwisp_ipam.apps.OpenWispIpamConfig',
     'dj_rest_auth',
     'dj_rest_auth.registration',
-    # 'openwisp_radius',
+   # 'openwisp_radius',
     'openwisp_radius.apps.OpenwispRadiusConfig',
     # openwisp2 admin theme
     # (must be loaded here)
@@ -96,6 +106,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.forms',
     # other dependencies
+    'django_celery_beat',
     'sortedm2m',
     'reversion',
     'leaflet',
@@ -116,6 +127,7 @@ EXTENDED_APPS = [
     'django_x509',
     'django_loci',
 ]
+
 
 OPENWISP_ADMIN_THEME_LINKS = [
  {
@@ -223,6 +235,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(BASE_DIR, 'templates')],
+	
         'OPTIONS': {
             'loaders': [
                 ('django.template.loaders.cached.Loader', [
@@ -244,6 +257,33 @@ TEMPLATES = [
     },
 ]
 
+
+
+# settings.py (add or update the LEAFLET_CONFIG dictionary)
+LEAFLET_CONFIG = {
+    # Set the default map center & zoom (optional, adjust as needed):
+    'DEFAULT_CENTER': (0, 0),        # e.g. (lat, lon) for your area
+    'DEFAULT_ZOOM': 2,              # initial zoom level
+    'MIN_ZOOM': 1,
+    'MAX_ZOOM': 19,
+    'attributionControl': False,
+
+    # Define custom base tiles:
+    'TILES': [
+        (
+            "CartoDB Positron",  # human-friendly name for the layer
+            "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            '&copy; Map tiles by <a href="https://carto.com/attributions">Carto</a> (CC BY 3.0), Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL)'
+        ),
+        # You can include additional layers if desired. For example, a dark theme:
+        # (
+        #    "CartoDB Dark Matter",
+        #    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        #    '&copy; Map tiles by <a href="https://carto.com/attributions">Carto</a> (CC BY 3.0), Data © OpenStreetMap (ODbL)'
+        # )
+    ],
+    'RESET_VIEW': False  # keep current view when data updates (optional)
+}
 
 
 # Run celery in eager mode using in-memory broker while running tests
@@ -304,7 +344,29 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'openwisp_utils.metric_collection.tasks.send_usage_metrics',
         'schedule': timedelta(days=1),
     },
+   
+   
 }
+
+
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+OPENWISP_CUSTOM_OPENWRT_IMAGES = (
+    (
+        # Match your file exactly:
+        "SYS_X86_B_10.01.00_NXP_2507140727.img.gz",
+        {
+            # How it’ll show in the dropdown:
+            "label": "NexappOS IRX400-GE",
+            # Exactly what your router reports:
+            "boards": ("Nexapp IRX400-GE",),
+        },
+    ),
+
+)
+
+
+
 
 CELERY_TASK_ROUTES = {
     # network operations, executed in the "network" queue
@@ -343,6 +405,11 @@ DATABASES = {
     'default': {
         'ENGINE': 'openwisp_utils.db.backends.spatialite',
         'NAME': '/opt/openwisp2/db.sqlite3',
+	'OPTIONS': {
+            # wait up to 20 seconds before raising “database is locked”
+            'timeout': 120,  
+        },
+	 'ATOMIC_REQUESTS': False, 
     }
 }
 
@@ -363,7 +430,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 
 LANGUAGE_CODE = 'en-gb'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -380,12 +447,12 @@ MEDIA_URL = '/media/'
 DJANGO_X509_DEFAULT_CERT_VALIDITY = 1825
 DJANGO_X509_DEFAULT_CA_VALIDITY = 3650
 
-LEAFLET_CONFIG = {}
+
 # always disable RESET_VIEW button
-LEAFLET_CONFIG['RESET_VIEW'] = False
+#LEAFLET_CONFIG['RESET_VIEW'] = False
 
 # Set default email
-DEFAULT_FROM_EMAIL = 'openwisp2@openwisp2.mydomain.com'
+DEFAULT_FROM_EMAIL = 'connect@nexapp.co.in'
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 EMAIL_TIMEOUT = 10
 # See http://docs.djangoproject.com/en/dev/topics/logging for
@@ -456,6 +523,9 @@ LOGGING = {
     
 }
 
+
+
+
 # HTML minification with django pipeline
 PIPELINE = {'PIPELINE_ENABLED': True}
 # static files minification and invalidation with django-compress-staticfiles
@@ -463,6 +533,20 @@ STATICFILES_STORAGE = 'openwisp_utils.storage.CompressStaticFilesStorage'
 # GZIP compression is handled by nginx
 BROTLI_STATIC_COMPRESSION = False
 GZIP_STATIC_COMPRESSION = False
+
+
+
+# allow up to 200 MB uploads
+DATA_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024   # 200 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 200 * 1024 * 1024   # 200 MB
+
+# handle large uploads by streaming to a temporary file on disk first
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+]
+
+OPENWISP_FIRMWARE_UPGRADER_MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
 
 
 TIMESERIES_DATABASE = {
@@ -475,6 +559,13 @@ TIMESERIES_DATABASE = {
 }
 OPENWISP_MONITORING_DEFAULT_RETENTION_POLICY = '26280h0m0s'
 
+
+OPENWISP_API_INFO = {
+    "title": "Nexapp Controller API",
+    "default_version": "v1",
+    "description": "This is the API documentation for the Nexapp Controller.",
+}
+# at the btom of settings.py
 
 # REST_FRAMEWORK = {
 #     # Add your other DRF settings here if any

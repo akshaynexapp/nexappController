@@ -4,8 +4,9 @@ from django.db import models
 from django import forms
 
 from django.contrib.auth import get_user_model
-from openwisp_users.models import Organization
 from django.db.models import PROTECT
+from openwisp_users.models import Organization
+
 
 from openwisp_controller.config.models import Config as Device
 
@@ -34,7 +35,7 @@ class Tunnel(models.Model):
     ]
     MODE_CHOICES = [
         ('site_to_site', 'Site-to-Site'),
-        ('hub_spoke', 'Hub & Spoke'),
+        # ('hub_spoke', 'Hub & Spoke'),
         ('full_mesh', 'Full Mesh'),
     ]
     STATUS_CHOICES = [
@@ -44,7 +45,7 @@ class Tunnel(models.Model):
         ("rolled_back", "Rolled Back"),
     ]
     IKE_VERSION_CHOICES = [
-        ('ikev',  'IKEV1 & IKEV2'),
+        ('ike',  'IKEV1 & IKEV2'),
         ('ikev1','IKEv1'),
         ('ikev2','IKEv2'),
     ]
@@ -80,7 +81,22 @@ class Tunnel(models.Model):
         ('restart', 'restart'),
         ('none',    'none'),
     ]
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+    FORCEENCAPS_CHOICES = [
+        ('yes', 'Yes'),
+        ('no',  'No'),
+    ]
+    organization = models.ForeignKey(
+     Organization, 
+     on_delete=models.CASCADE, 
+     null=True, blank=True, editable=False
+     )
+    created_by = models.ForeignKey(
+        User, 
+        null=True, blank=True, 
+        on_delete=models.SET_NULL, 
+        editable=False
+    )
+ # organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     name = models.CharField(max_length=128, default='Tunnel')
     vpn_type = models.CharField(max_length=20, choices=VPN_TYPE_CHOICES)
     mode = models.CharField(max_length=20, choices=MODE_CHOICES)
@@ -94,37 +110,36 @@ class Tunnel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     # device_a = models.ForeignKey(Active_devices, on_delete=models.SET_NULL, null=True, blank=True, related_name='as_device_a')
     device_a = models.ForeignKey(Device, on_delete=models.CASCADE, null=True, blank=True, related_name='as_device_a')
-
-    device_b = models.ManyToManyField(Device, blank=True, related_name='as_device_b')
+    device_b = models.ForeignKey(Device, on_delete=models.CASCADE, null=True, blank=True, related_name='as_device_b')
     last_config_payload = models.JSONField(null=True, blank=True)
     device_a_wan_ip = models.CharField(
         max_length=128,
         blank=True,
         null=True,
-        help_text='Allocated wan IP for this tunnel'
+        help_text='Allocated wan IP for device A'
     )
     device_a_subnet = models.CharField(
         max_length=64,
         blank=True,
         null=True, 
-        help_text='Allocated Subnet for this tunnel' 
+        help_text='Allocated Subnet for device A'
     )
    
     device_b_wan_ip = models.CharField(
         max_length=128,
         blank=True,
         null=True,
-        help_text='Allocated IP for this tunnel'
+        help_text='Allocated IP for device B'
     )
     device_b_subnet = models.CharField(
         max_length=64,
         blank=True,
         null=True, 
-        help_text='Allocated Subnet for this tunnel' 
+        help_text='Allocated Subnet for device B'
     )
     is_enabled          = models.BooleanField(default=True, help_text="Toggle to enable/disable this tunnel")
-    local_identifier    = models.CharField(max_length=64, default='@tun3.local')
-    remote_identifier   = models.CharField(max_length=64, default='@tun3.remote')
+    # local_identifier    = models.CharField(max_length=64, default='@tun3.local')
+    # remote_identifier   = models.CharField(max_length=64, default='@tun3.remote')
     dpdaction = models.CharField(
         max_length=10,
         choices=DPD_ACTION_CHOICES,
@@ -135,18 +150,47 @@ class Tunnel(models.Model):
         default=False,
         help_text="Enable IP compression"
     )
-   
+    last_push_message = models.TextField(null=True, blank=True)
+
     pre_shared_key = models.CharField(
         max_length=128,
         blank=True,
         null=True,
         help_text='Persisted IPsec pre-shared key'
     )
-    subnet = models.CharField(
-        max_length=64,
+    local_ip_a = models.GenericIPAddressField(
+        help_text='Management IP of local device A',
         blank=True,
         null=True,
-        help_text='Allocated link subnet for this tunnel'
+    )
+    local_ip_b = models.GenericIPAddressField(
+        help_text='Management IP of local device B',
+        blank=True,
+        null=True,
+    )
+    latency = models.FloatField(
+       blank=True,
+        null=True, 
+    )
+    jitter = models.FloatField(
+       blank=True,
+        null=True,
+    )
+    packet_loss = models.FloatField(
+        blank=True,
+        null=True,
+    )
+    uuid_b = models.CharField(
+        blank=True,
+        max_length=64,
+        unique=True,
+        help_text='Unique identifier for device B',
+    )
+    uuid_a = models.CharField(
+        blank=True,
+        max_length=64,
+        unique=True,
+        help_text='Unique identifier for device A',
     )
  
     # … rest of your model …
@@ -178,6 +222,11 @@ class Tunnel(models.Model):
     
     def clean(self):
          super().clean()
+
+         if self.device_a_id and self.device_b_id and self.device_a_id == self.device_b_id:
+            raise ValidationError({
+                'device_b': 'Device B must be different from Device A.',
+            })
          # 1) CIDR syntax checks (always)
          for field in ('device_a_subnet', 'device_b_subnet'):
              cidr = getattr(self, field)
@@ -193,15 +242,12 @@ class Tunnel(models.Model):
   
          # 3) Only enforce “exactly one remote” when in site-to-site mode
          if self.mode == 'site_to_site':
-             remotes = self.device_b.all()
-             if remotes.count() != 1:
-                 raise ValidationError('Site-to-site tunnel requires exactly one remote device.')
-             remote = remotes.first()
+             
              # 4) Prevent duplicate tunnels on the same pair
              if Tunnel.objects.filter(
                     mode='site_to_site',
                     device_a=self.device_a,
-                    device_b=remote
+                    device_b=self.device_b
                 ).exclude(pk=self.pk).exists():
                  raise ValidationError(
                      'A tunnel between these devices already exists; please modify it.'
@@ -209,14 +255,16 @@ class Tunnel(models.Model):
     
        
     def save(self, *args, **kwargs):
-        if not self.device_a_subnet:
-            self.device_a_subnet = self._auto_assign_subnet()
-        if not self.device_b_subnet:
-            self.device_b_subnet = self._auto_assign_subnet()
+        # if not self.device_a_subnet:
+        #     self.device_a_subnet = self._auto_assign_subnet()
+        # if not self.device_b_subnet:
+        #     self.device_b_subnet = self._auto_assign_subnet()
         # if not self.device_a_wan_ip:
         #     self.device_a_wan_ip = self._get_wan_ip_a()
         # # if not self.device_b_wan_ip:
         #     self.device_b_wan_ip = self._get_wan_ip_b()
+        self.uuid_a = self.device_a.device.id
+        self.uuid_b = self.device_b.device.id
         super().save(*args, **kwargs)
 
 
@@ -225,91 +273,66 @@ class Tunnel(models.Model):
 
     def _format_esp(self):
         return f"{self.esp_encryption_algorithm}-{self.esp_integrity_algorithm}"
-    
-    # mgmt_ip_a = mgmt_map.get(self.device_a.name)
-    # mgmt_ip_b = mgmt_map.get(self.device_b.first().name)
-    # mgmt_map = fetch_management_ips_by_names(device_names)
+   
 
-
-
-
-    def _get_wan_ip_a(self):
-        """
-        Fetch the WAN IP of device A via its management API.
-        """
-        device_names = [self.device_a.name]
-        mgmt_map = fetch_management_ips_by_names(device_names)
-        mgmt_ip = mgmt_map.get(self.device_a.name)
-        if not mgmt_ip:
-            raise ValidationError('Management IP not found for device A.')
-
-        response = get_ip_config_by_mgmt_ip(mgmt_ip)
-        data = response.get('data', {})
-        local_wan_ip = data.get('local_wan_ip')
-        if not local_wan_ip:
-            raise ValidationError(f'Failed to fetch WAN IP: {local_wan_ip}')
-        return local_wan_ip
-    
-    # def _get_wan_ip_b(self):
+    # def _get_wan_ip_a(self):
     #     """
-    #     Fetch the WAN IP of the device from its management API.
+    #     Fetch the WAN IP of device A via its management API.
     #     """
-    #     device_names = [d.name for d in self.device_b.all()]
+    #     device_names = [self.device_a.name]
     #     mgmt_map = fetch_management_ips_by_names(device_names)
-
-    #     # Assuming you have a function to get the management IPs
-    #     mgmt_ip = mgmt_map.get(self.device_b.first().name)
+    #     mgmt_ip = mgmt_map.get(self.device_a.name)
     #     if not mgmt_ip:
-    #         raise ValidationError('Management IP not found for device B.')
-        
-    #     # Call the management API to get the WAN IP
+    #         raise ValidationError('Management IP not found for device A.')
+
     #     response = get_ip_config_by_mgmt_ip(mgmt_ip)
-    #     data_b = response.get('data', {})
-    #     device_b_wan_ip = data_b.get('local_wan_ip')
-    #     if not device_b_wan_ip:
-    #         raise ValidationError(f"Failed to fetch WAN IP: {device_b_wan_ip}")
-        
-    #     return device_b_wan_ip
+    #     data = response.get('data', {})
+    #     local_wan_ip = data.get('local_wan_ip')
+    #     if not local_wan_ip:
+    #         raise ValidationError(f'Failed to fetch WAN IP: {local_wan_ip}')
+    #     return local_wan_ip
+    
+  
 
-    def _auto_assign_subnet(self):
-        """
-        Auto-assign a /30 subnet via IPAM:
-        - Parent pool = Subnet objects with master_subnet=None
-        - Scoped to either the tunnel’s organization or global pools
-        """
-        # 1) find all top-level pools for this org or global
-        pool_qs = Subnet.objects.filter(master_subnet__isnull=True).filter(
-            Q(organization=self.organization) 
-        )
-        pool = pool_qs.first()
-        if not pool:
-            raise ValidationError(
-                f'No IPAM Subnet pool (master_subnet=None) available for org {self.organization}'
-            )
-        # 2) compute used /30s under this pool for this org
-        used = [
-            ipaddress.ip_network(child.subnet)
-            for child in pool.child_subnet_set.filter(organization=self.organization)
-        ]
-        parent_net = ipaddress.ip_network(pool.subnet)
-        # 3) iterate candidates
-        for candidate in parent_net.subnets(new_prefix=30):
-            if all(not candidate.overlaps(u) for u in used):
-                # 4) reserve it by creating a child Subnet
-                new_sub = Subnet(
-                    name=f'{self.name}-{candidate}',
-                    subnet=str(candidate),
-                    master_subnet=pool,
-                    organization=self.organization
-                )
-                new_sub.full_clean()
-                new_sub.save()
-                return str(candidate)
-        # 5) no room left
-        raise ValidationError(f'No free /30 prefixes left in IPAM pool {pool.subnet}')
+    # def _auto_assign_subnet(self):
+    #     """
+    #     Auto-assign a /30 subnet via IPAM:
+    #     - Parent pool = Subnet objects with master_subnet=None
+    #     - Scoped to either the tunnel’s organization or global pools
+    #     """
+    #     # 1) find all top-level pools for this org or global
+    #     pool_qs = Subnet.objects.filter(master_subnet__isnull=True).filter(
+    #         Q(organization=self.organization) 
+    #     )
+    #     pool = pool_qs.first()
+    #     if not pool:
+    #         raise ValidationError(
+    #             f'No IPAM Subnet pool (master_subnet=None) available for org {self.organization}'
+    #         )
+    #     # 2) compute used /30s under this pool for this org
+    #     used = [
+    #         ipaddress.ip_network(child.subnet)
+    #         for child in pool.child_subnet_set.filter(organization=self.organization)
+    #     ]
+    #     parent_net = ipaddress.ip_network(pool.subnet)
+    #     # 3) iterate candidates
+    #     for candidate in parent_net.subnets(new_prefix=30):
+    #         if all(not candidate.overlaps(u) for u in used):
+    #             # 4) reserve it by creating a child Subnet
+    #             new_sub = Subnet(
+    #                 name=f'{self.name}-{candidate}',
+    #                 subnet=str(candidate),
+    #                 master_subnet=pool,
+    #                 organization=self.organization
+    #             )
+    #             new_sub.full_clean()
+    #             new_sub.save()
+    #             return str(candidate)
+    #     # 5) no room left
+    #     raise ValidationError(f'No free /30 prefixes left in IPAM pool {pool.subnet}')
 
 
-    def push_to_agent(self, full_replace=False):
+    def push_to_agent(self,job_id=None, full_replace=False):
         """
         Top-level push entrypoint for this tunnel.
         Delegates to the Site-to-Site IPsec handler and handles history/status.
@@ -320,19 +343,11 @@ class Tunnel(models.Model):
             # Only support Phase 1: IPsec Site-to-Site
             if self.vpn_type == 'ipsec' and self.mode == 'site_to_site':
                 # Call the Phase 1 handler
-                result = deploy_site_to_site(self.id, full_replace=full_replace)
+                result = deploy_site_to_site(self.id,job_id=job_id, full_replace=full_replace)
 
-            if self.vpn_type == 'ipsec' and self.mode == 'hub_spoke':
-                result = deploy_hub_and_spoke(self.id, full_replace=full_replace)
-                    
-            # Call the Phase 1 handler
-            # else :
-            #     return {
-            #         'status': 'skipped',
-            #         'message': 'Unsupported VPN type or mode for push operation.'
-            #     }
- 
-            # Call the Phase 1 handler
+            # if self.vpn_type == 'ipsec' and self.mode == 'hub_spoke':
+            #     result = deploy_hub_and_spoke(self.id, full_replace=full_replace)
+            
             
             return result
  
@@ -341,6 +356,7 @@ class Tunnel(models.Model):
            
             self.status = 'error'
             self.save(update_fields=['status'])
+            
             try:
                 rb = rollback_device(self, self.vpn_type)
                 

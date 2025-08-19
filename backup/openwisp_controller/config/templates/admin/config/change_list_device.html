@@ -3,7 +3,20 @@
 
 {% block object-tools-items %}
     {% if not is_popup and has_add_permission and has_change_permission %}
+        <li>
+            <a href="/admin/{{ opts.app_label }}/{{ opts.model_name }}/map/" class="addlink"> 
+            
+            {% trans "Map View" %}
+            </a>
+        </li>
+
         <li><a href="{% url opts|admin_urlname:'recoverlist' %}" class="recoverlink">{% blocktrans with cl.opts.verbose_name_plural|escape as name %}Recover deleted {{name}}{% endblocktrans %}</a></li>
+         <!-- <li>
+          <a href="/admin/{{ opts.app_label }}/{{ opts.model_name }}/map/" class="addlink">
+            {% trans "Map View" %}
+          </a>
+        </li> -->
     {% endif %}
+
     {{ block.super }}
 {% endblock %}

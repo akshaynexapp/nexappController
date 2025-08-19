@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>CPE Health Status</h1>
+{% include "reports/_kpi.html" %}
+<div class="section">
+  <table>
+    <thead>
+      <tr>
+        <th>Host Name</th>
+        <th>Model No.</th>
+        <th>Serial No.</th>
+        <th>Mng IP</th>
+        <th>Location</th>
+        <th>CPU</th>
+        <th>Mem Used / Total</th>
+        <th>Load (1/5)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in devices %}
+      <tr>
+        <td>{{ d.site_name }}</td>
+        <td>{{ d.device_name }}</td>
+        <td>{{ d.uptime }}</td>
+        <td>{{ d.cpu_pct }}</td>
+        <td>{{ d.cpu_pct }}</td>
+        <td>{{ d.mem_used_mb }} / {{ d.mem_total_mb }}</td>
+        <td>{{ d.load1 }} / {{ d.load5 }}</td>
+       
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

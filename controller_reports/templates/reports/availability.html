@@ -1,0 +1,17 @@
+{% extends "reports/_report_base.html" %}
+{% block content %}
+<h1>Network Availability</h1>
+{% include "reports/_kpi.html" %}
+<div class="section"><h2>Outage Calendar</h2><div class="chart">[Calendar Heatmap Placeholder]</div></div>
+<div class="section">
+  <h2>Incidents</h2>
+  <table>
+    <thead><tr><th>Site</th><th>Device</th><th>Interface</th><th>Start</th><th>End</th><th>Duration</th><th>Cause</th></tr></thead>
+    <tbody>
+      {% for o in outages %}
+      <tr><td>{{ o.site_name }}</td><td>{{ o.device_name }}</td><td>{{ o.ifname }}</td><td>{{ o.start }}</td><td>{{ o.end }}</td><td>{{ o.duration }}</td><td>{{ o.cause }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+
+      .cards-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .card {
+        flex: 1 1 45%;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #111827;
+      }
+      .chart-wrapper {
+        position: relative;
+        height: 200px;
+        width: 100%;
+      }
+      #realtimeProtocolsearchInput {
+        margin-top: 10px;
+        margin-bottom: 2px;
+        padding: 5px;
+        width: 280px;
+      }
+      #realtimelocalhostsearchInput {
+        margin-top: 10px;
+        margin-bottom: 2px;
+        padding: 5px;
+        width: 280px;
+      }
+      #realtimeApplicationsearchInput {
+        margin-top: 10px;
+        margin-bottom: 2px;
+        padding: 5px;
+        width: 280px;
+      }
+    </style>
+  </head>
+  <body>
+    <br />
+    <br />
+    <br />
+    <div class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>Local Hosts</h3>
+
+        <input
+          type="text"
+          id="realtimelocalhostsearchInput"
+          placeholder="Filter"
+          onkeyup="realtimelocalhostfilterTable()"
+        />
+        <table id="realtimelocalhostTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Application</h3>
+
+        <input
+          type="text"
+          id="realtimeApplicationsearchInput"
+          placeholder="Filter"
+          onkeyup="realtimeApplicationfilterTable()"
+        />
+        <table id="realtimeApplicationTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+           
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <br />
+    <br />
+    <br />
+    <div class="cards-container">
+      <!-- Local Hosts Card -->
+      <div class="card">
+        <h3>Protocol</h3>
+
+        <input
+          type="text"
+          id="realtimeProtocolsearchInput"
+          placeholder="Filter"
+          onkeyup="realtimeProtocolfilterTable()"
+        />
+        <table id="realtimeProtocolTable">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Traffic</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        class=""
+        style="
+          flex: 1 1 45%;
+          padding: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        "
+      ></div>
+    </div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+        const match = window.location.pathname.match(
+          /device\/([0-9a-fA-F-]+)(?:\/|$)/
+        );
+        if (!match) {
+          console.error("Cannot find device ID in URL");
+          return;
+        }
+        const pk = match[1];
+        const apiUrl = `/api/v1/monitoring/device/${pk}/real_traffic/`;
+
+        // 1) Create controller + timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10 s
+
+        fetch(apiUrl, {
+          credentials: "include",
+          signal: controller.signal,
+        })
+          .then((response) => {
+            clearTimeout(timeoutId); // <— stop the timer on any resolution
+            if (!response.ok) {
+              throw new Error(
+                `API error ${response.status}: ${response.statusText}`
+              );
+            }
+            return response.json();
+          })
+          .then((json) => {
+            const {top_protocols,top_hosts , top_apps } = json.latest_raw.talkers;
+      populateApplicationTable(top_apps);
+      populateProtocolTable(top_protocols);
+            populateLocalhostTable(top_hosts);
+
+            // Update the UI with the fetched data
+            })
+.catch((err) => {
+            clearTimeout(timeoutId); // <— also clear on error
+            if (err.name === "AbortError") {
+              console.error("Fetch aborted (timeout)");
+            } else {
+              console.error("Fetch failed:", err);
+            }
+            document.getElementById("blocked_threats_total").textContent =
+              "Error";
+            document.getElementById("blocked_Ip_total").textContent = "Error";
+          });
+      
+    
+        });
+
+
+        /**
+ * Fill the table with name/value pairs
+ */
+function populateApplicationTable(apps) {
+  const tbody = document.querySelector("#realtimeApplicationTable tbody");
+  tbody.innerHTML = ""; // clear
+
+  apps.forEach(({ name, value }) => {
+    const tr = document.createElement("tr");
+
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = name;
+    tr.appendChild(tdLabel);
+
+    const tdTraffic = document.createElement("td");
+    tdTraffic.textContent = formatBytes(value);
+    tr.appendChild(tdTraffic);
+
+    tbody.appendChild(tr);
+  });
+}
+
+
+function populateProtocolTable(apps) {
+  const tbody = document.querySelector("#realtimeProtocolTable tbody");
+  tbody.innerHTML = ""; // clear
+
+  apps.forEach(({ name, value }) => {
+    const tr = document.createElement("tr");
+
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = name;
+    tr.appendChild(tdLabel);
+
+    const tdTraffic = document.createElement("td");
+    tdTraffic.textContent = formatBytes(value);
+    tr.appendChild(tdTraffic);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * Simple bytes → human‐readable string
+ */
+function formatBytes(bytes, decimals = 2) {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
+
+/**
+ * Filter table rows based on what's typed into the filter input
+ */
+function realtimeApplicationfilterTable() {
+  const input = document.getElementById("realtimeApplicationsearchInput");
+  const filter = input.value.toUpperCase();
+  const rows = document
+    .getElementById("realtimeApplicationTable")
+    .tBodies[0]
+    .getElementsByTagName("tr");
+
+  Array.from(rows).forEach((row) => {
+    const labelCell = row.getElementsByTagName("td")[0];
+    row.style.display =
+      labelCell && labelCell.textContent.toUpperCase().includes(filter)
+        ? ""
+        : "none";
+  });
+}
+
+function realtimeProtocolfilterTable() {
+  const input = document.getElementById("realtimeProtocolsearchInput");
+  const filter = input.value.toUpperCase();
+  const rows = document
+    .getElementById("realtimeProtocolTable")
+    .tBodies[0]
+    .getElementsByTagName("tr");
+
+  Array.from(rows).forEach((row) => {
+    const labelCell = row.getElementsByTagName("td")[0];
+    row.style.display =
+      labelCell && labelCell.textContent.toUpperCase().includes(filter)
+        ? ""
+        : "none";
+  });
+}
+    
+     
+
+function populateLocalhostTable(hosts) {
+  const tbody = document.querySelector("#realtimelocalhostTable tbody");
+  tbody.innerHTML = "";
+
+  hosts.forEach(({ host, totals }) => {
+    const tr = document.createElement("tr");
+
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = host;
+    tr.appendChild(tdLabel);
+
+    const tdTraffic = document.createElement("td");
+    tdTraffic.textContent = formatMB(totals.bandwidth);
+    tr.appendChild(tdTraffic);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/**
+ * Format a numeric MB value to two decimals
+ */
+function formatMB(value, decimals = 2) {
+  return value.toFixed(decimals);
+}
+
+/**
+ * Live‐filter the Local Hosts table by host name
+ */
+function realtimelocalhostfilterTable() {
+  const filter = document
+    .getElementById("realtimelocalhostsearchInput")
+    .value.toUpperCase();
+
+  const rows = document
+    .getElementById("realtimelocalhostTable")
+    .tBodies[0]
+    .getElementsByTagName("tr");
+
+  Array.from(rows).forEach((row) => {
+    const label = row.getElementsByTagName("td")[0].textContent.toUpperCase();
+    row.style.display = label.includes(filter) ? "" : "none";
+  });
+}
+
+
+    </script>
+
+</script>
+
+
+    
+    <script>
+      // function realtimelocalhostfilterTable() {
+      //   const input = document
+      //     .getElementById("realtimelocalhostsearchInput")
+      //     .value.toLowerCase();
+      //   const rows = document.querySelectorAll(
+      //     "#realtimelocalhostTable tbody tr"
+      //   );
+
+      //   rows.forEach((row) => {
+      //     const label = row.querySelector("td").textContent.toLowerCase();
+
+      //     // show row if it matches, hide otherwise
+      //     row.style.display = label.includes(input) ? "" : "none";
+      //   });
+      // }
+
+      // function realtimeApplicationfilterTable() {
+      //   const input = document
+      //     .getElementById("realtimeApplicationsearchInput")
+      //     .value.toLowerCase();
+      //   const rows = document.querySelectorAll(
+      //     "#realtimeApplicationTable tbody tr"
+      //   );
+
+      //   rows.forEach((row) => {
+      //     const label = row.querySelector("td").textContent.toLowerCase();
+
+      //     // show row if it matches, hide otherwise
+      //     row.style.display = label.includes(input) ? "" : "none";
+      //   });
+      // }
+
+      // function realtimeProtocolfilterTable() {
+      //   const input = document
+      //     .getElementById("realtimeProtocolsearchInput")
+      //     .value.toLowerCase();
+      //   const rows = document.querySelectorAll(
+      //     "#realtimeProtocolTable tbody tr"
+      //   );
+
+      //   rows.forEach((row) => {
+      //     const label = row.querySelector("td").textContent.toLowerCase();
+
+      //     // show row if it matches, hide otherwise
+      //     row.style.display = label.includes(input) ? "" : "none";
+      //   });
+      // }
+    
+    </script>
+  </body>
+</html>
